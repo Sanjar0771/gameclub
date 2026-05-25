@@ -73,4 +73,4 @@ COPY package.json pnpm-workspace.yaml ./
 EXPOSE 3001
 
 # Prisma migrate + start
-CMD cd packages/db && node node_modules/prisma/build/index.js migrate deploy && cd /app/apps/server && node dist/index.js
+CMD cd /app/packages/db && npx prisma migrate deploy 2>&1 || true && cd /app/apps/server && node dist/index.js
