@@ -121,7 +121,7 @@ export async function adminRoutes(app: FastifyInstance) {
       where,
       include: {
         user: true,
-        branches: { select: { id: true, name: true, status: true } },
+        branches: { select: { id: true, name: true, status: true, commissionPct: true } },
       },
       orderBy: { createdAt: 'desc' },
       take: 100,

@@ -44,22 +44,22 @@ export default function AdminDashboard() {
         </div>
         <h1 className="text-2xl font-bold mt-1">{user?.firstName}</h1>
         <div className="grid grid-cols-2 gap-2 mt-4">
+          <Link href="/admin/partners" className="bg-white/20 backdrop-blur rounded-xl p-3 active:bg-white/30">
+            <div className="text-xs opacity-80">{lang === 'UZ' ? 'Hamkorlar' : 'Партнёров'}</div>
+            <div className="text-xl font-bold mt-1">{data?.totals?.partners ?? 0}</div>
+          </Link>
+          <Link href="/admin/partners" className="bg-white/20 backdrop-blur rounded-xl p-3 active:bg-white/30">
+            <div className="text-xs opacity-80">{lang === 'UZ' ? 'Filiallar' : 'Филиалов'}</div>
+            <div className="text-xl font-bold mt-1">{data?.totals?.branches ?? 0}</div>
+          </Link>
           <div className="bg-white/20 backdrop-blur rounded-xl p-3">
             <div className="text-xs opacity-80">{lang === 'UZ' ? 'Mijozlar' : 'Клиентов'}</div>
             <div className="text-xl font-bold mt-1">{data?.totals?.customers ?? 0}</div>
           </div>
-          <div className="bg-white/20 backdrop-blur rounded-xl p-3">
-            <div className="text-xs opacity-80">{lang === 'UZ' ? 'Hamkorlar' : 'Партнёров'}</div>
-            <div className="text-xl font-bold mt-1">{data?.totals?.partners ?? 0}</div>
-          </div>
-          <div className="bg-white/20 backdrop-blur rounded-xl p-3">
-            <div className="text-xs opacity-80">{lang === 'UZ' ? 'Filiallar' : 'Филиалов'}</div>
-            <div className="text-xl font-bold mt-1">{data?.totals?.branches ?? 0}</div>
-          </div>
-          <div className="bg-white/20 backdrop-blur rounded-xl p-3">
+          <Link href="/admin/payments" className="bg-white/20 backdrop-blur rounded-xl p-3 active:bg-white/30">
             <div className="text-xs opacity-80">{lang === 'UZ' ? 'Bronlar' : 'Броней'}</div>
             <div className="text-xl font-bold mt-1">{data?.totals?.bookings ?? 0}</div>
-          </div>
+          </Link>
         </div>
 
         {isSuper && data?.totals?.commission !== null && (

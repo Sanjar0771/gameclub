@@ -155,7 +155,26 @@ function ComputersTab({ branchId, branch, lang }: { branchId: string; branch: an
 
   return (
     <>
-      <button onClick={() => setShowAdd(true)} className="btn-primary w-full">
+      {(!branch.computerTypes || branch.computerTypes.length === 0) && (
+        <Card className="!p-3 border-l-4 border-yellow-500">
+          <p className="text-sm text-tg-hint">
+            {lang === 'UZ'
+              ? '⚠️ Avval "Narxlar" bo\'limida PC turini yarating (Standart, VIP va h.k.), keyin PC qo\'shishingiz mumkin.'
+              : '⚠️ Сначала создайте тип ПК в разделе "Цены" (Стандарт, VIP и т.д.), затем добавляйте ПК.'}
+          </p>
+        </Card>
+      )}
+
+      <button
+        onClick={() => {
+          if (!branch.computerTypes || branch.computerTypes.length === 0) {
+            showAlert(lang === 'UZ' ? 'Avval "Narxlar" bo\'limida PC turini yarating' : 'Сначала создайте тип ПК в разделе "Цены"');
+            return;
+          }
+          setShowAdd(true);
+        }}
+        className="btn-primary w-full"
+      >
         <Plus className="w-4 h-4 mr-2" />
         {lang === 'UZ' ? 'Yangi PC qo\'shish' : 'Добавить ПК'}
       </button>
@@ -228,10 +247,17 @@ function PricingTab({ branchId, branch, lang }: { branchId: string; branch: any;
   });
 
   const addType = async () => {
+    if (!form.name) {
+      await showAlert(lang === 'UZ' ? 'Tur nomini kiriting' : 'Введите название типа');
+      return;
+    }
     const res = await api.post(`/api/partner/branches/${branchId}/computer-types`, form);
     if (res.ok) {
+      hapticImpact('medium');
       qc.invalidateQueries({ queryKey: ['my-branches'] });
       setShowAdd(false);
+    } else {
+      await showAlert((res as any).error?.message ?? 'Xato');
     }
   };
 
