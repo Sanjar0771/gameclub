@@ -53,6 +53,7 @@ export default function AdminPreAdmins() {
     <div className="min-h-screen pb-8 safe-pb">
       <PageHeader
         title={lang === 'UZ' ? 'Pre-adminlar' : 'Пре-админы'}
+        backHref="/admin"
         right={
           <button onClick={() => setShowAdd(true)} className="p-2 rounded-full active:bg-tg-secondary-bg">
             <Plus className="w-5 h-5" />

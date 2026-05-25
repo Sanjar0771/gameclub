@@ -51,7 +51,7 @@ export default function Broadcast() {
 
   return (
     <div className="min-h-screen pb-8 safe-pb">
-      <PageHeader title={lang === 'UZ' ? 'Ommaviy yuborish' : 'Рассылка'} />
+      <PageHeader title={lang === 'UZ' ? 'Ommaviy yuborish' : 'Рассылка'} backHref="/admin" />
 
       <div className="p-4 space-y-4">
         <Card>

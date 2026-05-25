@@ -35,7 +35,7 @@ export default function AuditLogs() {
 
   return (
     <div className="min-h-screen pb-8 safe-pb">
-      <PageHeader title={lang === 'UZ' ? 'Audit log' : 'Журнал аудита'} />
+      <PageHeader title={lang === 'UZ' ? 'Audit log' : 'Журнал аудита'} backHref="/admin" />
 
       <div className="px-4 pt-3 flex gap-2 overflow-x-auto">
         {actionOptions.map((f) => (

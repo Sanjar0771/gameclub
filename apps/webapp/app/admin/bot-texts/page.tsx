@@ -37,7 +37,7 @@ export default function BotTexts() {
 
   return (
     <div className="min-h-screen pb-8 safe-pb">
-      <PageHeader title={lang === 'UZ' ? 'Bot matnlari' : 'Тексты бота'} />
+      <PageHeader title={lang === 'UZ' ? 'Bot matnlari' : 'Тексты бота'} backHref="/admin" />
 
       <div className="p-4 space-y-2">
         {isLoading ? (

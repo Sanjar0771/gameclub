@@ -50,7 +50,7 @@ export default function PendingPayments() {
 
   return (
     <div className="min-h-screen pb-8 safe-pb">
-      <PageHeader title={lang === 'UZ' ? 'Tasdiqlash kutmoqda' : 'Ожидают подтверждения'} />
+      <PageHeader title={lang === 'UZ' ? 'Tasdiqlash kutmoqda' : 'Ожидают подтверждения'} backHref="/admin" />
 
       <div className="p-4 space-y-2">
         {isLoading ? (

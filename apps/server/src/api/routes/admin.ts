@@ -159,14 +159,20 @@ export async function adminRoutes(app: FastifyInstance) {
       targetId: id,
     });
 
-    await notifyUser({
-      userId: partner.userId,
-      type: 'PARTNER_APPROVED',
-      titleUz: '🎉 Tabriklaymiz!',
-      titleRu: '🎉 Поздравляем!',
-      bodyUz: 'Sizning hamkor sifatidagi arizangiz tasdiqlandi. Endi filial qo\'shing!',
-      bodyRu: 'Ваша заявка партнёра одобрена. Теперь добавьте филиал!',
-    });
+    // Notification xatosi bo'lsa ham tasdiqlash muvaffaqiyatli bo'lishi kerak
+    try {
+      await notifyUser({
+        userId: partner.userId,
+        type: 'PARTNER_APPROVED',
+        titleUz: '🎉 Tabriklaymiz!',
+        titleRu: '🎉 Поздравляем!',
+        bodyUz: 'Sizning hamkor sifatidagi arizangiz tasdiqlandi. Endi filial qo\'shing!',
+        bodyRu: 'Ваша заявка партнёра одобрена. Теперь добавьте филиал!',
+      });
+    } catch (e) {
+      // Notification xatosi — log qilamiz lekin approve muvaffaqiyatli
+      console.error('Partner approval notification failed:', e);
+    }
 
     return { ok: true, data: { approved: true } };
   });
@@ -196,14 +202,18 @@ export async function adminRoutes(app: FastifyInstance) {
       metadata: { reason: body?.reason },
     });
 
-    await notifyUser({
-      userId: partner.userId,
-      type: 'PARTNER_REJECTED',
-      titleUz: '❌ Ariza rad etildi',
-      titleRu: '❌ Заявка отклонена',
-      bodyUz: `Sabab: ${body?.reason ?? 'ko\'rsatilmagan'}`,
-      bodyRu: `Причина: ${body?.reason ?? 'не указана'}`,
-    });
+    try {
+      await notifyUser({
+        userId: partner.userId,
+        type: 'PARTNER_REJECTED',
+        titleUz: '❌ Ariza rad etildi',
+        titleRu: '❌ Заявка отклонена',
+        bodyUz: `Sabab: ${body?.reason ?? 'ko\'rsatilmagan'}`,
+        bodyRu: `Причина: ${body?.reason ?? 'не указана'}`,
+      });
+    } catch (e) {
+      console.error('Partner rejection notification failed:', e);
+    }
 
     return { ok: true, data: { rejected: true } };
   });
@@ -318,7 +328,11 @@ export async function adminRoutes(app: FastifyInstance) {
     });
 
     // QR kod yuborish (bot orqali rasm)
-    await sendBookingConfirmedWithQr(payment.bookingId);
+    try {
+      await sendBookingConfirmedWithQr(payment.bookingId);
+    } catch (e) {
+      console.error('QR notification failed:', e);
+    }
 
     await audit({
       actorId: userCtx.userId,
@@ -356,14 +370,18 @@ export async function adminRoutes(app: FastifyInstance) {
       });
     });
 
-    await notifyUser({
-      userId: payment.booking.customer.id,
-      type: 'PAYMENT_REJECTED',
-      titleUz: '❌ Chek qabul qilinmadi',
-      titleRu: '❌ Чек не принят',
-      bodyUz: `Sabab: ${body?.reason ?? 'ko\'rsatilmagan'}. Iltimos, chekni qaytadan yuboring.`,
-      bodyRu: `Причина: ${body?.reason ?? 'не указана'}. Пожалуйста, отправьте чек повторно.`,
-    });
+    try {
+      await notifyUser({
+        userId: payment.booking.customer.id,
+        type: 'PAYMENT_REJECTED',
+        titleUz: '❌ Chek qabul qilinmadi',
+        titleRu: '❌ Чек не принят',
+        bodyUz: `Sabab: ${body?.reason ?? 'ko\'rsatilmagan'}. Iltimos, chekni qaytadan yuboring.`,
+        bodyRu: `Причина: ${body?.reason ?? 'не указана'}. Пожалуйста, отправьте чек повторно.`,
+      });
+    } catch (e) {
+      console.error('Payment rejection notification failed:', e);
+    }
 
     return { ok: true, data: { rejected: true } };
   });
@@ -420,14 +438,18 @@ export async function adminRoutes(app: FastifyInstance) {
       });
     });
 
-    await notifyUser({
-      userId: w.branch.partner.userId,
-      type: 'WITHDRAWAL_PROCESSED',
-      titleUz: '✅ Pul o\'tkazildi',
-      titleRu: '✅ Деньги переведены',
-      bodyUz: `${w.amount} so'm sizning kartangizga o'tkazildi.`,
-      bodyRu: `${w.amount} сум переведено на вашу карту.`,
-    });
+    try {
+      await notifyUser({
+        userId: w.branch.partner.userId,
+        type: 'WITHDRAWAL_PROCESSED',
+        titleUz: '✅ Pul o\'tkazildi',
+        titleRu: '✅ Деньги переведены',
+        bodyUz: `${w.amount} so'm sizning kartangizga o'tkazildi.`,
+        bodyRu: `${w.amount} сум переведено на вашу карту.`,
+      });
+    } catch (e) {
+      console.error('Withdrawal notification failed:', e);
+    }
 
     return { ok: true, data: { completed: true } };
   });

@@ -60,7 +60,7 @@ export default function AdminWithdrawals() {
 
   return (
     <div className="min-h-screen pb-8 safe-pb">
-      <PageHeader title={lang === 'UZ' ? 'Yechib olish so\'rovlari' : 'Заявки на вывод'} />
+      <PageHeader title={lang === 'UZ' ? 'Yechib olish so\'rovlari' : 'Заявки на вывод'} backHref="/admin" />
 
       <div className="px-4 pt-3 flex gap-2 overflow-x-auto">
         {[

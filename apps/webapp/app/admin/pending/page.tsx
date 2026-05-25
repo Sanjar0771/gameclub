@@ -31,6 +31,10 @@ export default function PendingApplications() {
     if (res.ok) {
       hapticNotification('success');
       qc.invalidateQueries({ queryKey: ['pending-partners'] });
+      await showAlert(lang === 'UZ' ? '✅ Tasdiqlandi!' : '✅ Одобрено!');
+    } else {
+      hapticNotification('error');
+      await showAlert((res as any).error?.message ?? (lang === 'UZ' ? 'Xatolik yuz berdi' : 'Произошла ошибка'));
     }
   };
 
@@ -49,7 +53,7 @@ export default function PendingApplications() {
 
   return (
     <div className="min-h-screen pb-8 safe-pb">
-      <PageHeader title={lang === 'UZ' ? 'Kutilayotgan arizalar' : 'Ожидающие заявки'} />
+      <PageHeader title={lang === 'UZ' ? 'Kutilayotgan arizalar' : 'Ожидающие заявки'} backHref="/admin" />
 
       <div className="p-4 space-y-2">
         {isLoading ? (

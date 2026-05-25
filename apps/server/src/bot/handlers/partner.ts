@@ -109,7 +109,7 @@ export function registerPartnerHandlers(bot: Bot<BotContext>) {
           config.SUPER_ADMIN_TELEGRAM_ID.toString(),
           `📬 Yangi hamkor arizasi\n\n👤 ${reg.fullName}\n📞 ${phone}\n🆔 ${ctx.from?.id}`,
           {
-            reply_markup: webAppButton('🔍 Ko\'rish', '/admin/partners'),
+            reply_markup: webAppButton('🔍 Ko\'rish va tasdiqlash', '/admin/pending'),
           },
         );
       } catch (e) {

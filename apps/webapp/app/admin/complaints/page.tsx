@@ -41,7 +41,7 @@ export default function AdminComplaints() {
 
   return (
     <div className="min-h-screen pb-8 safe-pb">
-      <PageHeader title={lang === 'UZ' ? 'Shikoyatlar' : 'Жалобы'} />
+      <PageHeader title={lang === 'UZ' ? 'Shikoyatlar' : 'Жалобы'} backHref="/admin" />
 
       <div className="px-4 pt-3 flex gap-2 overflow-x-auto">
         {[
