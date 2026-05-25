@@ -72,5 +72,8 @@ COPY package.json pnpm-workspace.yaml ./
 
 EXPOSE 3001
 
-# Prisma db push + start
-CMD cd /app/packages/db && npx prisma db push --skip-generate 2>&1 || true && cd /app/apps/server && node dist/index.js
+# Entrypoint script
+COPY entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
+
+ENTRYPOINT ["/bin/sh", "/app/entrypoint.sh"]
