@@ -27,14 +27,19 @@ export default function PendingApplications() {
   const approve = async (id: string) => {
     const ok = await showConfirm(lang === 'UZ' ? 'Tasdiqlaymizmi?' : 'Одобрить?');
     if (!ok) return;
-    const res = await api.post(`/api/admin/partners/${id}/approve`);
-    if (res.ok) {
-      hapticNotification('success');
-      qc.invalidateQueries({ queryKey: ['pending-partners'] });
-      await showAlert(lang === 'UZ' ? '✅ Tasdiqlandi!' : '✅ Одобрено!');
-    } else {
-      hapticNotification('error');
-      await showAlert((res as any).error?.message ?? (lang === 'UZ' ? 'Xatolik yuz berdi' : 'Произошла ошибка'));
+    try {
+      const res = await api.post(`/api/admin/partners/${id}/approve`);
+      if (res.ok) {
+        hapticNotification('success');
+        qc.invalidateQueries({ queryKey: ['pending-partners'] });
+        await showAlert(lang === 'UZ' ? '✅ Tasdiqlandi!' : '✅ Одобрено!');
+      } else {
+        hapticNotification('error');
+        const errMsg = (res as any).error?.message || (res as any).error?.code || JSON.stringify(res);
+        await showAlert(`Xato: ${errMsg}`);
+      }
+    } catch (e: any) {
+      await showAlert(`Catch xato: ${e?.message || e}`);
     }
   };
 
