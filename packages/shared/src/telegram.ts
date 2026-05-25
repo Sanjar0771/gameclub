@@ -41,8 +41,10 @@ export function validateTelegramInitData(
     params.delete('hash');
 
     // Data check string — kalitlar alfabetik tartibda
-    const dataCheckString = Array.from(params.entries())
-      .sort(([a], [b]) => a.localeCompare(b))
+    const entries: [string, string][] = [];
+    params.forEach((v, k) => entries.push([k, v]));
+    const dataCheckString = entries
+      .sort((a, b) => a[0]!.localeCompare(b[0]!))
       .map(([k, v]) => `${k}=${v}`)
       .join('\n');
 
