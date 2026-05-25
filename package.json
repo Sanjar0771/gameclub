@@ -1,0 +1,34 @@
+{
+  "name": "gameclub",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Gameclub PC bron qilish platformasi — Telegram Bot + WebApp",
+  "scripts": {
+    "dev:bot": "pnpm --filter @gameclub/bot dev",
+    "dev:api": "pnpm --filter @gameclub/api dev",
+    "dev:webapp": "pnpm --filter @gameclub/webapp dev",
+    "dev:server": "pnpm --filter @gameclub/server dev",
+    "build": "pnpm -r build",
+    "build:server": "pnpm --filter @gameclub/server build",
+    "build:webapp": "pnpm --filter @gameclub/webapp build",
+    "start:server": "pnpm --filter @gameclub/server start",
+    "db:generate": "pnpm --filter @gameclub/db generate",
+    "db:migrate": "pnpm --filter @gameclub/db migrate",
+    "db:deploy": "pnpm --filter @gameclub/db deploy",
+    "db:seed": "pnpm --filter @gameclub/db seed",
+    "db:studio": "pnpm --filter @gameclub/db studio",
+    "db:reset": "pnpm --filter @gameclub/db reset",
+    "typecheck": "pnpm -r typecheck",
+    "lint": "pnpm -r lint",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\""
+  },
+  "devDependencies": {
+    "prettier": "^3.3.3",
+    "typescript": "^5.5.4"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "packageManager": "pnpm@9.7.0"
+}

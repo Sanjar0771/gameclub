@@ -1,0 +1,667 @@
+// ====================================================================
+// GAMECLUB PLATFORM — Prisma Schema
+// ====================================================================
+// 5 rol: SUPER_ADMIN | PRE_ADMIN | PARTNER | ASSISTANT | CUSTOMER
+// ====================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// ENUMS
+// ============================================================
+
+enum Role {
+  SUPER_ADMIN
+  PRE_ADMIN
+  PARTNER
+  ASSISTANT
+  CUSTOMER
+}
+
+enum Language {
+  UZ
+  RU
+}
+
+enum PartnerStatus {
+  PENDING      // ariza yuborilgan, kutilmoqda
+  APPROVED     // tasdiqlangan
+  REJECTED     // rad etilgan
+  BANNED       // bloklangan
+}
+
+enum BranchStatus {
+  ACTIVE
+  CLOSED       // vaqtincha yopiq (ta'mirlash)
+  DISABLED     // super-admin tomonidan o'chirilgan
+}
+
+enum ComputerStatus {
+  AVAILABLE
+  OCCUPIED     // hozir ishlatilmoqda
+  BROKEN       // buzilgan
+  RESERVED     // bron qilingan (lekin hali boshlanmagan)
+}
+
+enum BookingStatus {
+  PENDING_PAYMENT    // mijoz to'lov kutilmoqda
+  PAYMENT_REVIEW     // chek yuborilgan, super-admin tasdiqlamoqda
+  CONFIRMED          // tasdiqlangan, QR berildi
+  ACTIVE             // mijoz keldi, QR tasdiqlandi, o'ynayapti
+  COMPLETED          // tugadi (pul hamkor balansiga o'tdi)
+  NO_SHOW            // mijoz kelmadi (pul baribir hamkor balansiga)
+  CANCELLED_BY_USER  // mijoz bekor qildi (5+ soat oldin)
+  REJECTED_BY_CLUB   // hamkor rad etdi (PC buzildi va h.k.)
+  REFUNDED           // pul qaytarildi
+  EXPIRED            // to'lov qilinmay vaqti o'tdi
+}
+
+enum PaymentStatus {
+  AWAITING_RECEIPT   // mijoz chek yuborishi kutilmoqda
+  RECEIPT_UPLOADED   // chek yuklandi, tasdiqlash kutilmoqda
+  CONFIRMED          // super-admin tasdiqladi
+  REJECTED           // chek rad etildi
+}
+
+enum WithdrawalStatus {
+  REQUESTED
+  PROCESSING
+  COMPLETED
+  REJECTED
+}
+
+enum ComplaintStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum NotificationType {
+  BOOKING_CREATED
+  BOOKING_CONFIRMED
+  BOOKING_REMINDER
+  BOOKING_REJECTED
+  BOOKING_EXTENDED
+  PAYMENT_CONFIRMED
+  PAYMENT_REJECTED
+  REFUND_ISSUED
+  PROMO
+  SYSTEM
+  PARTNER_APPROVED
+  PARTNER_REJECTED
+  WITHDRAWAL_PROCESSED
+  COMPLAINT_REPLY
+  BROADCAST
+}
+
+enum ActorRole {
+  SUPER_ADMIN
+  PRE_ADMIN
+  PARTNER
+  ASSISTANT
+  CUSTOMER
+  SYSTEM
+}
+
+// ============================================================
+// USERS — barcha foydalanuvchilar bitta jadvalda
+// ============================================================
+
+model User {
+  id           String   @id @default(cuid())
+  telegramId   BigInt   @unique
+  username     String?
+  firstName    String?
+  lastName     String?
+  phone        String?
+  language     Language @default(UZ)
+  role         Role     @default(CUSTOMER)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  lastSeenAt   DateTime?
+
+  // Role-specific relations
+  superAdmin   SuperAdmin?
+  preAdmin     PreAdmin?
+  partner      Partner?
+  assistant    Assistant?
+
+  // Customer relations
+  bookings     Booking[]
+  ratings      Rating[]
+  complaints   Complaint[]
+  notifications Notification[]
+  favorites    Favorite[]
+
+  // Audit logs (kim bajargan)
+  auditLogs    AuditLog[] @relation("ActorUser")
+
+  @@index([role])
+  @@index([telegramId])
+}
+
+// ============================================================
+// SUPER ADMIN (1 ta)
+// ============================================================
+
+model SuperAdmin {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  login        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+}
+
+// ============================================================
+// PRE ADMIN (cheksiz)
+// ============================================================
+
+model PreAdmin {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  login        String   @unique
+  passwordHash String
+  // Pre-admin "kuzatuv"ga olgan filiallar
+  watchedBranches BranchWatcher[]
+  createdAt    DateTime @default(now())
+  createdBy    String?  // SuperAdmin id
+}
+
+// Pre-admin qaysi filiallarni kuzatadi
+model BranchWatcher {
+  id         String   @id @default(cuid())
+  preAdminId String
+  preAdmin   PreAdmin @relation(fields: [preAdminId], references: [id], onDelete: Cascade)
+  branchId   String
+  branch     Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@unique([preAdminId, branchId])
+}
+
+// ============================================================
+// PARTNER — Gameclub egasi
+// ============================================================
+
+model Partner {
+  id              String        @id @default(cuid())
+  userId          String        @unique
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fullName        String
+  phone           String
+  passportImage   String?       // Cloudinary URL
+  status          PartnerStatus @default(PENDING)
+  rejectReason    String?
+  approvedAt      DateTime?
+  approvedBy      String?       // user id (super-admin yoki pre-admin)
+  bannedAt        DateTime?
+  banReason       String?
+
+  branches        Branch[]
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([status])
+}
+
+// ============================================================
+// BRANCH — Filial (gameclub)
+// ============================================================
+
+model Branch {
+  id              String         @id @default(cuid())
+  partnerId       String
+  partner         Partner        @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  name            String
+  description     String?
+  region          String         // viloyat (Toshkent shahri, Samarqand, ...)
+  city            String         // shahar/tuman
+  address         String         // ko'cha, mo'ljal
+  latitude        Float?
+  longitude       Float?
+  phone           String?
+  cardNumber      String         // bu filialga to'lov tushadigan karta
+  cardHolderName  String?
+  commissionPct   Decimal        @default(10.0) @db.Decimal(5, 2) // 5-20%
+  openTime        String         @default("09:00") // "HH:mm" formatda
+  closeTime       String         @default("24:00")
+  worksAroundClock Boolean       @default(false)
+  status          BranchStatus   @default(ACTIVE)
+  closedReason    String?        // vaqtincha yopiq sababi
+  closedUntil     DateTime?
+
+  // Rasmlar
+  images          BranchImage[]
+  // PClar
+  computers       Computer[]
+  // PC turlari (Standart/VIP/PS5) — har filialda alohida
+  computerTypes   ComputerType[]
+  // Aksiyalar
+  promotions      Promotion[]
+  // Yordamchilar (3 tagacha)
+  assistants      Assistant[]
+  // Balans (har filial uchun alohida)
+  balance         Balance?
+  // Yechib olish so'rovlari
+  withdrawals     Withdrawal[]
+  // Bronlar
+  bookings        Booking[]
+  // Reytinglar
+  ratings         Rating[]
+  // Shikoyatlar
+  complaints      Complaint[]
+  // Sevimlilar
+  favorites       Favorite[]
+  // Pre-admin kuzatuvchilari
+  watchers        BranchWatcher[]
+
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@index([partnerId])
+  @@index([status])
+  @@index([region, city])
+}
+
+model BranchImage {
+  id        String   @id @default(cuid())
+  branchId  String
+  branch    Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  url       String   // Cloudinary
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+}
+
+// ============================================================
+// COMPUTER TYPES (Standart, VIP, PS5, Sim-racing...)
+// Har filialda alohida narxlar bilan
+// ============================================================
+
+model ComputerType {
+  id            String     @id @default(cuid())
+  branchId      String
+  branch        Branch     @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  name          String     // "Standart", "VIP", "PS5", "Sim-racing"
+  description   String?
+  // Narxlar (so'mda)
+  dayPrice      Int        // kunduzgi narx (so'm/soat)
+  nightPrice    Int        // kechki narx (so'm/soat)
+  dayStartTime  String     @default("08:00")  // kunduzgi vaqt boshi
+  dayEndTime    String     @default("18:00")  // kunduzgi vaqt oxiri
+  // Tungi paket (hamkor o'zi sozlaydi)
+  hasNightPackage Boolean  @default(false)
+  nightPackagePrice Int?   // tungi paket narxi
+  nightPackageStart String? // "22:00"
+  nightPackageEnd   String? // "08:00"
+
+  computers     Computer[]
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  @@index([branchId])
+}
+
+// ============================================================
+// COMPUTER — har bir PC alohida (PC-1, PC-2, ...)
+// ============================================================
+
+model Computer {
+  id          String         @id @default(cuid())
+  branchId    String
+  branch      Branch         @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  typeId      String
+  type        ComputerType   @relation(fields: [typeId], references: [id], onDelete: Restrict)
+  name        String         // "PC-1", "VIP-1", "PS5-1"
+  description String?
+  status      ComputerStatus @default(AVAILABLE)
+  brokenReason String?
+
+  bookings    Booking[]
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@unique([branchId, name])
+  @@index([branchId, status])
+}
+
+// ============================================================
+// PROMOTION — Aksiyalar / chegirmalar
+// ============================================================
+
+model Promotion {
+  id          String   @id @default(cuid())
+  branchId    String
+  branch      Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  discountPct Int      // 1-100
+  // Cheklovlar
+  validFrom   DateTime
+  validUntil  DateTime
+  isActive    Boolean  @default(true)
+  // Faqat birinchi bron uchunmi?
+  firstBookingOnly Boolean @default(false)
+  // Eng kam summa
+  minAmount   Int?
+  // Foydalanish limiti (umumiy)
+  maxUses     Int?
+  usedCount   Int      @default(0)
+
+  bookings    Booking[]
+  createdAt   DateTime @default(now())
+
+  @@index([branchId, isActive])
+}
+
+// ============================================================
+// ASSISTANT — Gameclub yordamchisi (bitta filialga bog'langan)
+// ============================================================
+
+model Assistant {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  branchId    String
+  branch      Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  // Granular permissions (hamkor checkbox bilan belgilaydi)
+  canViewBookings       Boolean @default(true)
+  canConfirmQr          Boolean @default(true)
+  canRejectBooking      Boolean @default(true)
+  canMarkNoShow         Boolean @default(true)
+  canManageComputers    Boolean @default(false)
+  canChangePrices       Boolean @default(false)
+  canChangeWorkHours    Boolean @default(false)
+  canCloseBranch        Boolean @default(false)
+  canViewIncome         Boolean @default(false)
+  canManagePromotions   Boolean @default(false)
+  canViewComplaints     Boolean @default(true)
+
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([branchId])
+}
+
+// ============================================================
+// BOOKING — Bron
+// ============================================================
+
+model Booking {
+  id             String        @id @default(cuid())
+  // 8 raqamli inson o'qiy oladigan kod (mijoz uchun)
+  code           String        @unique @default(cuid())
+
+  customerId     String
+  customer       User          @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  branchId       String
+  branch         Branch        @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  computerId     String
+  computer       Computer      @relation(fields: [computerId], references: [id], onDelete: Restrict)
+  promotionId    String?
+  promotion      Promotion?    @relation(fields: [promotionId], references: [id])
+
+  // Vaqt slotlari (30 daqiqali bloklar — har vaqt :00 yoki :30 da)
+  startAt        DateTime
+  endAt          DateTime
+  durationMinutes Int          // 60, 90, 120, 180... yoki tungi paket
+
+  // Tungi paket bo'lsa
+  isNightPackage Boolean       @default(false)
+
+  // Summa hisoblari
+  basePrice      Int           // chegirmasiz narx (so'm)
+  discountAmount Int           @default(0)
+  totalAmount    Int           // mijoz to'laydigan summa
+  commissionPct  Decimal       @db.Decimal(5, 2)
+  commissionAmount Int         // platforma uchun
+  partnerAmount  Int           // hamkor balansiga tushadigan
+
+  status         BookingStatus @default(PENDING_PAYMENT)
+  qrCode         String?       @unique  // QR kontent (booking id + secret)
+  qrConfirmedAt  DateTime?
+  qrConfirmedBy  String?       // partner/assistant user id
+
+  // Bekor qilish / rad etish
+  cancelledAt    DateTime?
+  cancelReason   String?
+  rejectedAt     DateTime?
+  rejectReason   String?
+
+  // Tugatish
+  completedAt    DateTime?
+  noShowAt       DateTime?
+
+  // To'lov
+  payment        Payment?
+
+  // Eslatma yuborilganmi?
+  reminderSentAt DateTime?
+
+  // Asl bron (uzaytirilgan bo'lsa)
+  extendedFromId String?
+  extendedFrom   Booking?      @relation("BookingExtension", fields: [extendedFromId], references: [id])
+  extensions     Booking[]     @relation("BookingExtension")
+
+  rating         Rating?
+
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@index([customerId])
+  @@index([branchId, startAt])
+  @@index([computerId, startAt, endAt])
+  @@index([status])
+}
+
+// ============================================================
+// PAYMENT — Mijoz to'lovi (chek yuklash)
+// ============================================================
+
+model Payment {
+  id             String        @id @default(cuid())
+  bookingId      String        @unique
+  booking        Booking       @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  amount         Int
+  cardNumber     String        // qaysi kartaga to'langan (filialning kartasi)
+  receiptImage   String?       // chek screenshot (Cloudinary)
+  status         PaymentStatus @default(AWAITING_RECEIPT)
+  uploadedAt     DateTime?
+  confirmedAt    DateTime?
+  confirmedBy    String?       // super-admin user id
+  rejectedAt     DateTime?
+  rejectReason   String?
+
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@index([status])
+}
+
+// ============================================================
+// BALANCE — Hamkor balansi (filial bo'yicha)
+// ============================================================
+
+model Balance {
+  id          String   @id @default(cuid())
+  branchId    String   @unique
+  branch      Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  amount      Int      @default(0)  // so'm
+  totalEarned Int      @default(0)  // umuman tushgan
+  totalWithdrawn Int   @default(0)
+  updatedAt   DateTime @updatedAt
+}
+
+// ============================================================
+// WITHDRAWAL — Yechib olish so'rovlari
+// ============================================================
+
+model Withdrawal {
+  id           String           @id @default(cuid())
+  branchId     String
+  branch       Branch           @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  amount       Int
+  cardNumber   String           // qaysi kartaga
+  status       WithdrawalStatus @default(REQUESTED)
+  note         String?
+  processedBy  String?          // super-admin user id
+  processedAt  DateTime?
+  rejectReason String?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  @@index([status])
+  @@index([branchId])
+}
+
+// ============================================================
+// RATING — Baho va izoh
+// ============================================================
+
+model Rating {
+  id         String   @id @default(cuid())
+  bookingId  String   @unique
+  booking    Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  customerId String
+  customer   User     @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  branchId   String
+  branch     Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  stars      Int      // 1..5
+  comment    String?
+  createdAt  DateTime @default(now())
+
+  @@index([branchId])
+}
+
+// ============================================================
+// COMPLAINT — Shikoyat (mijozdan)
+// ============================================================
+
+model Complaint {
+  id          String          @id @default(cuid())
+  customerId  String
+  customer    User            @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  branchId    String?
+  branch      Branch?         @relation(fields: [branchId], references: [id])
+  bookingId   String?
+  subject     String
+  message     String
+  status      ComplaintStatus @default(OPEN)
+  resolution  String?
+  resolvedBy  String?         // user id
+  resolvedAt  DateTime?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@index([status])
+  @@index([branchId])
+}
+
+// ============================================================
+// FAVORITE — Mijoz sevimli gameclublari
+// ============================================================
+
+model Favorite {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  branchId   String
+  branch     Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@unique([userId, branchId])
+}
+
+// ============================================================
+// NOTIFICATION — Bildirishnomalar log
+// ============================================================
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      NotificationType
+  title     String
+  body      String
+  data      Json?            // qo'shimcha ma'lumot (booking id va h.k.)
+  isRead    Boolean          @default(false)
+  sentViaBot Boolean         @default(false)
+  createdAt DateTime         @default(now())
+
+  @@index([userId, isRead])
+  @@index([createdAt])
+}
+
+// ============================================================
+// AUDIT LOG — Kim nima qildi (xavfsizlik uchun)
+// ============================================================
+
+model AuditLog {
+  id         String    @id @default(cuid())
+  actorId    String?
+  actor      User?     @relation("ActorUser", fields: [actorId], references: [id])
+  actorRole  ActorRole
+  action     String    // "PARTNER_APPROVED", "BOOKING_REJECTED", "PRICE_CHANGED"
+  targetType String?   // "Partner", "Booking", "Branch"
+  targetId   String?
+  metadata   Json?     // o'zgartirilgan maydonlar
+  ip         String?
+  createdAt  DateTime  @default(now())
+
+  @@index([actorId, createdAt])
+  @@index([action])
+  @@index([targetType, targetId])
+}
+
+// ============================================================
+// BOT TEXTS — Super-admin tahrir qila oladigan matnlar
+// ============================================================
+
+model BotText {
+  key       String   @id   // "welcome_message", "booking_confirmed", ...
+  textUz    String   @db.Text
+  textRu    String   @db.Text
+  updatedAt DateTime @updatedAt
+  updatedBy String?
+}
+
+// ============================================================
+// BROADCAST — Yuborilgan ommaviy xabarlar
+// ============================================================
+
+model Broadcast {
+  id          String    @id @default(cuid())
+  title       String
+  messageUz   String    @db.Text
+  messageRu   String    @db.Text
+  // Kimga: "ALL", "CUSTOMERS", "PARTNERS"
+  audience    String
+  sentCount   Int       @default(0)
+  failedCount Int       @default(0)
+  sentBy      String
+  status      String    @default("DRAFT") // DRAFT, SENDING, SENT
+  createdAt   DateTime  @default(now())
+  sentAt      DateTime?
+}
+
+// ============================================================
+// SETTINGS — Tizim sozlamalari (key-value)
+// ============================================================
+
+model Setting {
+  key       String   @id
+  value     String   @db.Text
+  updatedAt DateTime @updatedAt
+}
