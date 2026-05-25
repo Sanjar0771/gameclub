@@ -59,6 +59,7 @@ COPY --from=builder /app/packages/i18n/node_modules ./packages/i18n/node_modules
 
 # Build outputs
 COPY --from=builder /app/apps/server/dist ./apps/server/dist
+COPY --from=builder /app/packages/db/dist ./packages/db/dist
 COPY --from=builder /app/packages/db/prisma ./packages/db/prisma
 COPY --from=builder /app/packages/shared/dist ./packages/shared/dist
 COPY --from=builder /app/packages/i18n/dist ./packages/i18n/dist

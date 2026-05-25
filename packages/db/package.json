@@ -2,7 +2,7 @@
   "name": "@gameclub/db",
   "version": "0.1.0",
   "private": true,
-  "main": "./src/index.ts",
+  "main": "./dist/index.js",
   "types": "./src/index.ts",
   "scripts": {
     "generate": "prisma generate",
@@ -10,12 +10,13 @@
     "deploy": "prisma migrate deploy",
     "studio": "prisma studio",
     "seed": "tsx prisma/seed.ts",
-    "build": "echo 'db package uses prisma generate - no tsc build needed'"
+    "build": "tsc -p tsconfig.json"
   },
   "dependencies": {
     "@prisma/client": "^5.18.0"
   },
   "devDependencies": {
+    "@types/node": "^22.5.0",
     "prisma": "^5.18.0",
     "tsx": "^4.17.0",
     "typescript": "^5.5.4"
