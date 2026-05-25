@@ -72,5 +72,5 @@ COPY package.json pnpm-workspace.yaml ./
 
 EXPOSE 3001
 
-# Prisma migrate + start
-CMD cd /app/packages/db && npx prisma migrate deploy 2>&1 || true && cd /app/apps/server && node dist/index.js
+# Prisma db push + start
+CMD cd /app/packages/db && npx prisma db push --skip-generate 2>&1 || true && cd /app/apps/server && node dist/index.js

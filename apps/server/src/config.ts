@@ -6,11 +6,11 @@ const envSchema = z.object({
   TZ: z.string().default('Asia/Tashkent'),
 
   // Database
-  DATABASE_URL: z.string().url(),
+  DATABASE_URL: z.string().min(10),
 
   // Bot
   BOT_TOKEN: z.string().min(20),
-  BOT_USERNAME: z.string().min(3),
+  BOT_USERNAME: z.string().min(3).default('gameclub_bot'),
   WEBAPP_URL: z.string().url(),
 
   // Super Admin
@@ -18,7 +18,8 @@ const envSchema = z.object({
   SUPER_ADMIN_LOGIN: z.string().default('admin'),
   SUPER_ADMIN_PASSWORD: z.string().min(6),
 
-  // API
+  // API (Railway sets PORT automatically)
+  PORT: z.string().optional(),
   API_PORT: z.string().default('3001').transform(Number),
   API_HOST: z.string().default('0.0.0.0'),
   JWT_SECRET: z.string().min(32),

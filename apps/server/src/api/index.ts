@@ -88,7 +88,8 @@ export async function buildApi(): Promise<FastifyInstance> {
 
 export async function startApi(): Promise<FastifyInstance> {
   const app = await buildApi();
-  await app.listen({ port: config.API_PORT, host: config.API_HOST });
-  log.info(`🚀 API server: http://${config.API_HOST}:${config.API_PORT}`);
+  const port = config.PORT ? Number(config.PORT) : config.API_PORT;
+  await app.listen({ port, host: config.API_HOST });
+  log.info(`🚀 API server: http://${config.API_HOST}:${port}`);
   return app;
 }
