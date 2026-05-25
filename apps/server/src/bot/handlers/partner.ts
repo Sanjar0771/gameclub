@@ -76,9 +76,16 @@ export function registerPartnerHandlers(bot: Bot<BotContext>) {
       const reg = ctx.session.partnerReg ?? {};
       reg.phone = phone;
 
-      // Partner yaratish
-      await prisma.partner.create({
-        data: {
+      // Partner yaratish yoki rad etilganini qayta ro'yxatga olish
+      await prisma.partner.upsert({
+        where: { userId: user.id },
+        update: {
+          fullName: reg.fullName ?? '',
+          phone,
+          status: PartnerStatus.PENDING,
+          rejectReason: null,
+        },
+        create: {
           userId: user.id,
           fullName: reg.fullName ?? '',
           phone,
