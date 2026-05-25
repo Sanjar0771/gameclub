@@ -32,25 +32,37 @@ export type ApiResponse<T> = ApiSuccess<T> | ApiError;
 
 async function request<T>(method: string, path: string, body?: unknown): Promise<ApiResponse<T>> {
   const url = `${API_URL}${path}`;
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-  };
+  const headers: Record<string, string> = {};
   const token = getAuthToken();
   if (token) headers['Authorization'] = `Bearer ${token}`;
   const initData = getInitData();
   if (initData) headers['X-Telegram-Init-Data'] = initData;
 
+  // Content-Type faqat body bo'lganda
+  const hasBody = body !== undefined && body !== null;
+  if (hasBody) headers['Content-Type'] = 'application/json';
+
   try {
     const res = await fetch(url, {
       method,
       headers,
-      body: body ? JSON.stringify(body) : undefined,
+      body: hasBody ? JSON.stringify(body) : undefined,
     });
     const json = await res.json().catch(() => null);
-    if (!json) {
+    if (!json || typeof json !== 'object') {
       return {
         ok: false,
         error: { code: 'NETWORK', message: `HTTP ${res.status}` },
+      };
+    }
+    // Fastify xato formati: { statusCode, error: "string", message, code }
+    if (!('ok' in json)) {
+      return {
+        ok: false,
+        error: {
+          code: json.code || json.error || 'SERVER_ERROR',
+          message: json.message || `HTTP ${res.status}`,
+        },
       };
     }
     return json as ApiResponse<T>;
