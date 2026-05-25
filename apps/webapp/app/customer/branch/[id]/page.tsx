@@ -77,6 +77,7 @@ export default function BranchDetail() {
       <PageHeader
         title={branch.name}
         subtitle={`${branch.city} • ${branch.address}`}
+        backHref="/customer/search"
         right={
           <button onClick={toggleFav} className="p-2 rounded-full active:bg-tg-secondary-bg">
             <Heart className={cn('w-5 h-5', isFav ? 'fill-red-500 text-red-500' : '')} />

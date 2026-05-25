@@ -20,7 +20,7 @@ export default function FavoritesPage() {
 
   return (
     <div className="min-h-screen pb-8 safe-pb">
-      <PageHeader title={lang === 'UZ' ? 'Sevimlilar' : 'Избранное'} />
+      <PageHeader title={lang === 'UZ' ? 'Sevimlilar' : 'Избранное'} backHref="/customer" />
 
       <div className="px-4 py-4 space-y-2">
         {isLoading ? (

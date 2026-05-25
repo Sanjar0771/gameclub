@@ -73,7 +73,7 @@ export default function BookingDetail() {
 
   return (
     <div className="min-h-screen pb-8 safe-pb">
-      <PageHeader title={lang === 'UZ' ? 'Bron tafsiloti' : 'Детали брони'} />
+      <PageHeader title={lang === 'UZ' ? 'Bron tafsiloti' : 'Детали брони'} backHref="/customer/bookings" />
 
       <div className="px-4 py-4 space-y-4">
         <Card>

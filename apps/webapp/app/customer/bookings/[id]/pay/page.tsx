@@ -51,7 +51,7 @@ export default function PaymentPage() {
 
   return (
     <div className="min-h-screen pb-8 safe-pb">
-      <PageHeader title={lang === 'UZ' ? 'To\'lov' : 'Оплата'} />
+      <PageHeader title={lang === 'UZ' ? 'To\'lov' : 'Оплата'} backHref="/customer/bookings" />
 
       <div className="px-4 py-4 space-y-4">
         <Card>

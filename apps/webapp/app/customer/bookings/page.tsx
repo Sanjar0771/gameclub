@@ -26,7 +26,7 @@ export default function CustomerBookings() {
 
   return (
     <div className="min-h-screen pb-8 safe-pb">
-      <PageHeader title={lang === 'UZ' ? 'Bronlarim' : 'Мои брони'} />
+      <PageHeader title={lang === 'UZ' ? 'Bronlarim' : 'Мои брони'} backHref="/customer" />
 
       <div className="px-4 py-4 space-y-6">
         {isLoading ? (

@@ -36,7 +36,7 @@ export default function SettingsPage() {
 
   return (
     <div className="min-h-screen pb-8 safe-pb">
-      <PageHeader title={lang === 'UZ' ? 'Sozlamalar' : 'Настройки'} />
+      <PageHeader title={lang === 'UZ' ? 'Sozlamalar' : 'Настройки'} backHref="/customer" />
 
       <div className="px-4 py-4 space-y-4">
         <Card>

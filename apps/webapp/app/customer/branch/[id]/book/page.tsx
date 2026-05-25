@@ -150,7 +150,7 @@ export default function BookPage() {
 
   return (
     <div className="min-h-screen pb-32 safe-pb">
-      <PageHeader title={lang === 'UZ' ? 'Bron qilish' : 'Бронирование'} subtitle={branch.name} />
+      <PageHeader title={lang === 'UZ' ? 'Bron qilish' : 'Бронирование'} subtitle={branch.name} backHref={`/customer/branch/${id}`} />
 
       <div className="px-4 py-4 space-y-4">
         {/* Step indicator */}

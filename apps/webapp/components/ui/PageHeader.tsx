@@ -8,21 +8,30 @@ interface Props {
   title: string;
   subtitle?: string;
   showBack?: boolean;
+  backHref?: string;
   right?: React.ReactNode;
 }
 
-export function PageHeader({ title, subtitle, showBack = true, right }: Props) {
+export function PageHeader({ title, subtitle, showBack = true, backHref, right }: Props) {
   const router = useRouter();
+
+  const handleBack = () => {
+    hapticImpact('light');
+    if (backHref) {
+      router.push(backHref);
+    } else if (window.history.length > 1) {
+      router.back();
+    } else {
+      router.push('/customer');
+    }
+  };
 
   return (
     <div className="sticky top-0 z-10 bg-tg-header-bg border-b border-tg-section-separator safe-pt">
       <div className="flex items-center gap-2 px-4 py-3">
         {showBack && (
           <button
-            onClick={() => {
-              hapticImpact('light');
-              router.back();
-            }}
+            onClick={handleBack}
             className="p-2 -ml-2 rounded-full active:bg-tg-secondary-bg"
             aria-label="Orqaga"
           >

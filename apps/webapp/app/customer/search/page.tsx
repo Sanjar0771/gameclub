@@ -83,6 +83,7 @@ export default function CustomerSearch() {
     <div className="min-h-screen pb-8 safe-pb">
       <PageHeader
         title={lang === 'UZ' ? 'Gameclub topish' : 'Поиск геймклубов'}
+        backHref="/customer"
         right={
           <div className="flex items-center gap-1">
             <button
