@@ -9,12 +9,18 @@ import { config } from '../config.js';
  * Keyingi so'rovlarda JWT'ni ishlatadi.
  */
 export async function authenticate(req: FastifyRequest, reply: FastifyReply) {
+  const hasAuth = !!req.headers['authorization'];
+  const hasInitData = !!req.headers['x-telegram-init-data'];
+
   // 1. JWT'ni tekshirish
-  try {
-    await req.jwtVerify();
-    return;
-  } catch {
-    // davom etish — initData ham bo'lishi mumkin
+  if (hasAuth) {
+    try {
+      await req.jwtVerify();
+      return;
+    } catch (e: any) {
+      console.log(`[auth] JWT xato (${req.method} ${req.url}): ${e?.message}`);
+      // davom etish — initData ham bo'lishi mumkin
+    }
   }
 
   // 2. Telegram initData header
@@ -22,9 +28,10 @@ export async function authenticate(req: FastifyRequest, reply: FastifyReply) {
   if (typeof initData === 'string' && initData.length > 0) {
     const result = validateTelegramInitData(initData, config.BOT_TOKEN);
     if (!result.valid || !result.data?.user) {
+      console.log(`[auth] initData yaroqsiz (${req.method} ${req.url}): ${result.error}`);
       return reply.code(401).send({
         ok: false,
-        error: { code: 'UNAUTHORIZED', message: 'Invalid initData' },
+        error: { code: 'UNAUTHORIZED', message: `Invalid initData: ${result.error}` },
       });
     }
     const tgUser = result.data.user;
@@ -32,6 +39,7 @@ export async function authenticate(req: FastifyRequest, reply: FastifyReply) {
       where: { telegramId: BigInt(tgUser.id) },
     });
     if (!user) {
+      console.log(`[auth] User topilmadi (tgId=${tgUser.id})`);
       return reply.code(401).send({
         ok: false,
         error: { code: 'UNAUTHORIZED', message: 'User not found' },
@@ -46,6 +54,7 @@ export async function authenticate(req: FastifyRequest, reply: FastifyReply) {
     return;
   }
 
+  console.log(`[auth] Auth yo'q (${req.method} ${req.url}) hasAuth=${hasAuth} hasInitData=${hasInitData}`);
   return reply.code(401).send({
     ok: false,
     error: { code: 'UNAUTHORIZED', message: 'No auth provided' },

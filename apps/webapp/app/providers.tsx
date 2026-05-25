@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { applyTelegramTheme, getTelegramWebApp, getInitData } from '@/lib/telegram';
-import { loginWithTelegram, api } from '@/lib/api';
+import { loginWithTelegram, getAuthToken, api } from '@/lib/api';
 import { useAuth, type AuthUser } from '@/lib/store';
 import { useRouter, usePathname } from 'next/navigation';
 
@@ -32,8 +32,53 @@ function TelegramAuthBoot({ children }: { children: React.ReactNode }) {
   const { setUser, setReady, isReady } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+  const authDone = useRef(false);
+  const routedRef = useRef(false);
 
+  // Auth — faqat bir marta
   useEffect(() => {
+    if (authDone.current) return;
+    authDone.current = true;
+
+    async function tryAuth(retries = 5): Promise<void> {
+      const initData = getInitData();
+
+      // Agar initData hali yo'q bo'lsa — TG script yuklanmagan, kutamiz
+      if (!initData && retries > 0) {
+        await new Promise((r) => setTimeout(r, 200));
+        return tryAuth(retries - 1);
+      }
+
+      if (!initData) {
+        // Telegram tashqarisida (browser) — localStorage'dan token bor bo'lishi mumkin
+        const existingToken = getAuthToken();
+        if (existingToken) {
+          try {
+            const me = await api.get<AuthUser>('/api/common/me');
+            if (me.ok) {
+              setUser(me.data);
+              setReady(true);
+              return;
+            }
+          } catch {
+            // token yaroqsiz
+          }
+        }
+        setReady(true);
+        return;
+      }
+
+      // Telegram ichida — initData bilan login
+      const res = await loginWithTelegram();
+      if (res.ok) {
+        const me = await api.get<AuthUser>('/api/common/me');
+        if (me.ok) {
+          setUser(me.data);
+        }
+      }
+      setReady(true);
+    }
+
     const tg = getTelegramWebApp();
     if (tg) {
       try {
@@ -45,40 +90,33 @@ function TelegramAuthBoot({ children }: { children: React.ReactNode }) {
       }
     }
 
-    (async () => {
-      const initData = getInitData();
-      if (!initData) {
-        // Browser (Telegram tashqarisida) — demo rejimi
-        setReady(true);
-        return;
+    tryAuth();
+  }, [setReady, setUser]);
+
+  // Routing — role bo'yicha yo'naltirish
+  useEffect(() => {
+    if (!isReady || routedRef.current) return;
+    const user = useAuth.getState().user;
+    if (!user) return;
+
+    if (pathname === '/' || pathname === '') {
+      routedRef.current = true;
+      switch (user.role) {
+        case 'SUPER_ADMIN':
+        case 'PRE_ADMIN':
+          router.replace('/admin');
+          break;
+        case 'PARTNER':
+          router.replace('/partner');
+          break;
+        case 'ASSISTANT':
+          router.replace('/assistant');
+          break;
+        default:
+          router.replace('/customer');
       }
-      const res = await loginWithTelegram();
-      if (res.ok) {
-        const me = await api.get<AuthUser>('/api/common/me');
-        if (me.ok) {
-          setUser(me.data);
-          // Default route by role
-          if (pathname === '/' || pathname === '') {
-            switch (me.data.role) {
-              case 'SUPER_ADMIN':
-              case 'PRE_ADMIN':
-                router.replace('/admin');
-                break;
-              case 'PARTNER':
-                router.replace('/partner');
-                break;
-              case 'ASSISTANT':
-                router.replace('/assistant');
-                break;
-              default:
-                router.replace('/customer');
-            }
-          }
-        }
-      }
-      setReady(true);
-    })();
-  }, [pathname, router, setReady, setUser]);
+    }
+  }, [isReady, pathname, router]);
 
   if (!isReady) {
     return (

@@ -139,8 +139,12 @@ export async function adminRoutes(app: FastifyInstance) {
   app.post('/partners/:id/approve', async (req, reply) => {
     const userCtx = (req as any).user;
     const { id } = req.params as { id: string };
+    console.log(`[approve] Partner ${id} tasdiqlash — user: ${userCtx?.userId}, role: ${userCtx?.role}`);
     const partner = await prisma.partner.findUnique({ where: { id }, include: { user: true } });
-    if (!partner) return reply.code(404).send({ ok: false, error: { code: 'NOT_FOUND', message: 'Topilmadi' } });
+    if (!partner) {
+      console.log(`[approve] Partner ${id} topilmadi`);
+      return reply.code(404).send({ ok: false, error: { code: 'NOT_FOUND', message: 'Topilmadi' } });
+    }
 
     await prisma.partner.update({
       where: { id },

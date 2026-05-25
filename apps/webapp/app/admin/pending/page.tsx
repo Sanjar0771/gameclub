@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { CheckCircle2, XCircle, User } from 'lucide-react';
-import { api } from '@/lib/api';
+import { api, loginWithTelegram, getAuthToken } from '@/lib/api';
 import { useAuth } from '@/lib/store';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card, Empty, LoadingScreen } from '@/components/ui/common';
@@ -28,31 +28,55 @@ export default function PendingApplications() {
     const ok = await showConfirm(lang === 'UZ' ? 'Tasdiqlaymizmi?' : 'Одобрить?');
     if (!ok) return;
     try {
-      const res = await api.post(`/api/admin/partners/${id}/approve`);
+      let res = await api.post(`/api/admin/partners/${id}/approve`);
+
+      // Agar auth xato bo'lsa — tokenni yangilab qayta urinish
+      if (!res.ok && ((res as any).error?.code === 'UNAUTHORIZED' || (res as any).error?.code === 'NETWORK')) {
+        const loginRes = await loginWithTelegram();
+        if (loginRes.ok) {
+          res = await api.post(`/api/admin/partners/${id}/approve`);
+        }
+      }
+
       if (res.ok) {
         hapticNotification('success');
         qc.invalidateQueries({ queryKey: ['pending-partners'] });
         await showAlert(lang === 'UZ' ? '✅ Tasdiqlandi!' : '✅ Одобрено!');
       } else {
         hapticNotification('error');
-        const errMsg = (res as any).error?.message || (res as any).error?.code || JSON.stringify(res);
-        await showAlert(`Xato: ${errMsg}`);
+        const errMsg = (res as any).error?.message || (res as any).error?.code || 'Noma\'lum xato';
+        await showAlert(lang === 'UZ' ? `Xato: ${errMsg}` : `Ошибка: ${errMsg}`);
       }
     } catch (e: any) {
-      await showAlert(`Catch xato: ${e?.message || e}`);
+      hapticNotification('error');
+      await showAlert(lang === 'UZ' ? `Xato: ${e?.message || e}` : `Ошибка: ${e?.message || e}`);
     }
   };
 
   const reject = async () => {
     if (!rejectingId || !reason) return;
-    const res = await api.post(`/api/admin/partners/${rejectingId}/reject`, { reason });
-    if (res.ok) {
-      hapticNotification('success');
-      qc.invalidateQueries({ queryKey: ['pending-partners'] });
-      setRejectingId(null);
-      setReason('');
-    } else {
-      await showAlert((res as any).error.message);
+    try {
+      let res = await api.post(`/api/admin/partners/${rejectingId}/reject`, { reason });
+
+      // Auth xato — tokenni yangilab qayta urinish
+      if (!res.ok && ((res as any).error?.code === 'UNAUTHORIZED' || (res as any).error?.code === 'NETWORK')) {
+        const loginRes = await loginWithTelegram();
+        if (loginRes.ok) {
+          res = await api.post(`/api/admin/partners/${rejectingId}/reject`, { reason });
+        }
+      }
+
+      if (res.ok) {
+        hapticNotification('success');
+        qc.invalidateQueries({ queryKey: ['pending-partners'] });
+        setRejectingId(null);
+        setReason('');
+      } else {
+        const errMsg = (res as any).error?.message || 'Noma\'lum xato';
+        await showAlert(lang === 'UZ' ? `Xato: ${errMsg}` : `Ошибка: ${errMsg}`);
+      }
+    } catch (e: any) {
+      await showAlert(lang === 'UZ' ? `Xato: ${e?.message || e}` : `Ошибка: ${e?.message || e}`);
     }
   };
 
