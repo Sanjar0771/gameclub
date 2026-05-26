@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Building2, Ban, Percent } from 'lucide-react';
+import { Building2, Ban, Percent, Unlock, Trash2 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/store';
 import { PageHeader } from '@/components/ui/PageHeader';
@@ -34,6 +34,30 @@ export default function AdminPartners() {
     if (res.ok) {
       hapticNotification('success');
       qc.invalidateQueries({ queryKey: ['admin-partners'] });
+    }
+  };
+
+  const unban = async (id: string) => {
+    const ok = await showConfirm(lang === 'UZ' ? 'Blokdan chiqarilsinmi?' : 'Разблокировать?');
+    if (!ok) return;
+    const res = await api.post(`/api/admin/partners/${id}/unban`);
+    if (res.ok) {
+      hapticNotification('success');
+      qc.invalidateQueries({ queryKey: ['admin-partners'] });
+    } else {
+      await showAlert((res as any).error?.message ?? 'Xato');
+    }
+  };
+
+  const remove = async (id: string) => {
+    const ok = await showConfirm(lang === 'UZ' ? 'Bazadan o\'chirilsinmi? Bu qaytarib bo\'lmaydi!' : 'Удалить из базы? Это необратимо!');
+    if (!ok) return;
+    const res = await api.delete(`/api/admin/partners/${id}`);
+    if (res.ok) {
+      hapticNotification('success');
+      qc.invalidateQueries({ queryKey: ['admin-partners'] });
+    } else {
+      await showAlert((res as any).error?.message ?? 'Xato');
     }
   };
 
@@ -119,14 +143,34 @@ export default function AdminPartners() {
                   ))}
                 </div>
               )}
-              {p.status === 'APPROVED' && (
-                <button
-                  onClick={() => ban(p.id)}
-                  className="mt-2 w-full !py-1.5 text-xs text-red-600 bg-red-50 rounded-lg flex items-center justify-center gap-1"
-                >
-                  <Ban className="w-3 h-3" />
-                  {lang === 'UZ' ? 'Bloklash' : 'Заблокировать'}
-                </button>
+              {isSuper && (
+                <div className="flex gap-2 mt-2">
+                  {p.status === 'APPROVED' && (
+                    <button
+                      onClick={() => ban(p.id)}
+                      className="flex-1 !py-1.5 text-xs text-red-600 bg-red-50 rounded-lg flex items-center justify-center gap-1"
+                    >
+                      <Ban className="w-3 h-3" />
+                      {lang === 'UZ' ? 'Bloklash' : 'Заблокировать'}
+                    </button>
+                  )}
+                  {p.status === 'BANNED' && (
+                    <button
+                      onClick={() => unban(p.id)}
+                      className="flex-1 !py-1.5 text-xs text-green-600 bg-green-50 rounded-lg flex items-center justify-center gap-1"
+                    >
+                      <Unlock className="w-3 h-3" />
+                      {lang === 'UZ' ? 'Blokdan chiqarish' : 'Разблокировать'}
+                    </button>
+                  )}
+                  <button
+                    onClick={() => remove(p.id)}
+                    className="!py-1.5 px-3 text-xs text-red-600 bg-red-50 rounded-lg flex items-center justify-center gap-1"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                    {lang === 'UZ' ? 'O\'chirish' : 'Удалить'}
+                  </button>
+                </div>
               )}
             </Card>
           ))

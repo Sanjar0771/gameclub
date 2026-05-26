@@ -245,6 +245,52 @@ export async function adminRoutes(app: FastifyInstance) {
     return { ok: true, data: { banned: true } };
   });
 
+  // === Hamkorni blokdan chiqarish ===
+  app.post('/partners/:id/unban', async (req, reply) => {
+    if (!isSuper(req)) return reply.code(403).send({ ok: false, error: { code: 'FORBIDDEN', message: 'Faqat super-admin' } });
+    const userCtx = (req as any).user;
+    const { id } = req.params as { id: string };
+    const partner = await prisma.partner.findUnique({ where: { id } });
+    if (!partner) return reply.code(404).send({ ok: false, error: { code: 'NOT_FOUND', message: 'Topilmadi' } });
+    await prisma.partner.update({
+      where: { id },
+      data: { status: PartnerStatus.APPROVED, bannedAt: null, banReason: null },
+    });
+    await audit({
+      actorId: userCtx.userId,
+      actorRole: 'SUPER_ADMIN',
+      action: 'PARTNER_UNBANNED',
+      targetType: 'Partner',
+      targetId: id,
+    });
+    return { ok: true, data: { unbanned: true } };
+  });
+
+  // === Hamkorni bazadan o'chirish ===
+  app.delete('/partners/:id', async (req, reply) => {
+    if (!isSuper(req)) return reply.code(403).send({ ok: false, error: { code: 'FORBIDDEN', message: 'Faqat super-admin' } });
+    const userCtx = (req as any).user;
+    const { id } = req.params as { id: string };
+    const partner = await prisma.partner.findUnique({ where: { id }, include: { branches: true } });
+    if (!partner) return reply.code(404).send({ ok: false, error: { code: 'NOT_FOUND', message: 'Topilmadi' } });
+    if (partner.branches.length > 0) {
+      return reply.code(400).send({
+        ok: false,
+        error: { code: 'HAS_BRANCHES', message: 'Avval filiallarni o\'chiring' },
+      });
+    }
+    await prisma.partner.delete({ where: { id } });
+    await prisma.user.update({ where: { id: partner.userId }, data: { role: Role.CUSTOMER } });
+    await audit({
+      actorId: userCtx.userId,
+      actorRole: 'SUPER_ADMIN',
+      action: 'PARTNER_DELETED',
+      targetType: 'Partner',
+      targetId: id,
+    });
+    return { ok: true, data: { deleted: true } };
+  });
+
   // === Filial komissiya foizini o'zgartirish (faqat super-admin) ===
   app.patch('/branches/:id/commission', async (req, reply) => {
     if (!isSuper(req)) {
