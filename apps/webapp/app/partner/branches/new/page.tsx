@@ -54,7 +54,14 @@ export default function NewBranchPage() {
       return;
     }
     setSubmitting(true);
-    const res = await api.post<any>('/api/partner/branches', form);
+    // Bo'sh stringlarni olib tashlaymiz (Zod validation uchun)
+    const payload: any = { ...form };
+    if (!payload.phone) delete payload.phone;
+    if (!payload.description) delete payload.description;
+    if (!payload.cardHolderName) delete payload.cardHolderName;
+    if (payload.latitude === undefined) delete payload.latitude;
+    if (payload.longitude === undefined) delete payload.longitude;
+    const res = await api.post<any>('/api/partner/branches', payload);
     setSubmitting(false);
     if (res.ok) {
       hapticNotification('success');

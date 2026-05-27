@@ -75,7 +75,11 @@ export default function EditBranchPage() {
       return;
     }
     setSubmitting(true);
-    const res = await api.patch(`/api/partner/branches/${id}`, form);
+    const payload: any = { ...form };
+    if (!payload.phone) delete payload.phone;
+    if (!payload.description) delete payload.description;
+    if (!payload.cardHolderName) delete payload.cardHolderName;
+    const res = await api.patch(`/api/partner/branches/${id}`, payload);
     setSubmitting(false);
     if (res.ok) {
       hapticNotification('success');
