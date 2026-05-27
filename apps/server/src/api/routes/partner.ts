@@ -15,6 +15,8 @@ import {
 import { requireRole } from '../middleware.js';
 import { audit } from '../../lib/audit.js';
 import { verifyQrPayload } from '../../lib/qr.js';
+import { config } from '../../config.js';
+import { getTelegramFileUrl } from '../../lib/cloudinary.js';
 
 export async function partnerRoutes(app: FastifyInstance) {
   app.addHook('preHandler', requireRole('PARTNER'));
@@ -613,6 +615,85 @@ export async function partnerRoutes(app: FastifyInstance) {
     await assertOwnsBranch(userCtx.userId, a.branchId);
     const updated = await prisma.assistant.update({ where: { id }, data: parse.data });
     return { ok: true, data: updated };
+  });
+
+  // === Filial rasmlari ===
+  app.post('/branches/:id/images', async (req, reply) => {
+    const userCtx = (req as any).user;
+    const { id } = req.params as { id: string };
+    await assertOwnsBranch(userCtx.userId, id);
+
+    const body = req.body as { url?: string; imageBase64?: string };
+
+    let imageUrl: string | null = null;
+
+    if (body.url) {
+      // URL to'g'ridan-to'g'ri berilgan
+      imageUrl = body.url;
+    } else if (body.imageBase64) {
+      // Base64 rasm — Telegram Bot API orqali saqlaymiz
+      try {
+        const base64Match = body.imageBase64.match(/^data:image\/\w+;base64,(.+)$/);
+        const buffer = Buffer.from(base64Match ? base64Match[1] : body.imageBase64, 'base64');
+        if (buffer.length > 5 * 1024 * 1024) {
+          return reply.code(400).send({ ok: false, error: { code: 'VALIDATION', message: 'Rasm 5MB dan katta' } });
+        }
+
+        // Telegram Bot API ga yuborish
+        const formData = new FormData();
+        formData.append('chat_id', config.SUPER_ADMIN_TELEGRAM_ID.toString());
+        formData.append('photo', new Blob([buffer], { type: 'image/jpeg' }), 'branch.jpg');
+        formData.append('caption', `📷 Branch image: ${id}`);
+        formData.append('disable_notification', 'true');
+
+        const sendRes = await fetch(`https://api.telegram.org/bot${config.BOT_TOKEN}/sendPhoto`, {
+          method: 'POST',
+          body: formData,
+        });
+        const sendData: any = await sendRes.json();
+
+        if (sendData.ok && sendData.result?.photo?.length > 0) {
+          const bestPhoto = sendData.result.photo[sendData.result.photo.length - 1];
+          imageUrl = await getTelegramFileUrl(bestPhoto.file_id);
+
+          // Xabarni o'chiramiz (spam bo'lmasligi uchun)
+          try {
+            await fetch(`https://api.telegram.org/bot${config.BOT_TOKEN}/deleteMessage`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ chat_id: config.SUPER_ADMIN_TELEGRAM_ID.toString(), message_id: sendData.result.message_id }),
+            });
+          } catch { /* ignore */ }
+        }
+      } catch (e) {
+        console.error('Image upload error:', e);
+        return reply.code(500).send({ ok: false, error: { code: 'UPLOAD_ERROR', message: 'Rasm yuklanmadi' } });
+      }
+    }
+
+    if (!imageUrl) {
+      return reply.code(400).send({ ok: false, error: { code: 'VALIDATION', message: 'url yoki imageBase64 kerak' } });
+    }
+
+    const count = await prisma.branchImage.count({ where: { branchId: id } });
+    if (count >= 10) {
+      return reply.code(400).send({ ok: false, error: { code: 'VALIDATION', message: 'Maksimum 10 ta rasm' } });
+    }
+
+    const img = await prisma.branchImage.create({
+      data: { branchId: id, url: imageUrl, order: count },
+    });
+    return { ok: true, data: img };
+  });
+
+  app.delete('/images/:imageId', async (req, reply) => {
+    const userCtx = (req as any).user;
+    const { imageId } = req.params as { imageId: string };
+    const img = await prisma.branchImage.findUnique({ where: { id: imageId }, include: { branch: true } });
+    if (!img) return reply.code(404).send({ ok: false, error: { code: 'NOT_FOUND', message: 'Topilmadi' } });
+    await assertOwnsBranch(userCtx.userId, img.branchId);
+    await prisma.branchImage.delete({ where: { id: imageId } });
+    return { ok: true, data: { deleted: true } };
   });
 
   app.delete('/assistants/:id', async (req, reply) => {

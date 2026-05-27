@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Plus, Edit3, Power, Users, Tag, Monitor } from 'lucide-react';
+import { Plus, Edit3, Power, Users, Tag, Monitor, ImagePlus, Trash2 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/store';
 import { PageHeader } from '@/components/ui/PageHeader';
@@ -16,7 +16,7 @@ export default function PartnerBranchDetail() {
   const router = useRouter();
   const { lang } = useAuth();
   const qc = useQueryClient();
-  const [tab, setTab] = useState<'overview' | 'computers' | 'pricing' | 'bookings' | 'assistants'>('overview');
+  const [tab, setTab] = useState<'overview' | 'images' | 'computers' | 'pricing' | 'bookings' | 'assistants'>('overview');
 
   const { data: branches, isLoading } = useQuery({
     queryKey: ['my-branches'],
@@ -49,7 +49,7 @@ export default function PartnerBranchDetail() {
       <PageHeader title={branch.name} subtitle={branch.address} />
 
       <div className="px-4 py-3 flex gap-2 overflow-x-auto">
-        {(['overview', 'computers', 'pricing', 'bookings', 'assistants'] as const).map((t) => (
+        {(['overview', 'images', 'computers', 'pricing', 'bookings', 'assistants'] as const).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -98,6 +98,10 @@ export default function PartnerBranchDetail() {
           </>
         )}
 
+        {tab === 'images' && (
+          <ImagesTab branchId={id} branch={branch} lang={lang} />
+        )}
+
         {tab === 'computers' && (
           <ComputersTab branchId={id} branch={branch} lang={lang} />
         )}
@@ -121,6 +125,7 @@ export default function PartnerBranchDetail() {
 function tabLabel(t: string, lang: 'UZ' | 'RU') {
   const labels: Record<string, { UZ: string; RU: string }> = {
     overview: { UZ: 'Umumiy', RU: 'Обзор' },
+    images: { UZ: 'Rasmlar', RU: 'Фото' },
     computers: { UZ: 'PClar', RU: 'ПК' },
     pricing: { UZ: 'Narxlar', RU: 'Цены' },
     bookings: { UZ: 'Bronlar', RU: 'Брони' },
@@ -431,6 +436,98 @@ function AssistantsTab({ branchId, lang }: { branchId: string; lang: 'UZ' | 'RU'
           </div>
         </div>
       )}
+    </>
+  );
+}
+
+function ImagesTab({ branchId, branch, lang }: { branchId: string; branch: any; lang: 'UZ' | 'RU' }) {
+  const qc = useQueryClient();
+  const [uploading, setUploading] = useState(false);
+
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      await showAlert(lang === 'UZ' ? 'Rasm 5MB dan katta bo\'lmasligi kerak' : 'Фото не должно быть больше 5МБ');
+      return;
+    }
+    setUploading(true);
+    try {
+      const base64 = await new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.readAsDataURL(file);
+      });
+      const res = await api.post(`/api/partner/branches/${branchId}/images`, { imageBase64: base64 });
+      if (res.ok) {
+        hapticImpact('medium');
+        qc.invalidateQueries({ queryKey: ['my-branches'] });
+      } else {
+        await showAlert((res as any).error?.message ?? 'Xato');
+      }
+    } catch {
+      await showAlert('Xato');
+    }
+    setUploading(false);
+    e.target.value = '';
+  };
+
+  const removeImage = async (imageId: string) => {
+    const ok = await showConfirm(lang === 'UZ' ? 'Rasm o\'chirilsinmi?' : 'Удалить фото?');
+    if (!ok) return;
+    const res = await api.delete(`/api/partner/images/${imageId}`);
+    if (res.ok) {
+      hapticImpact('medium');
+      qc.invalidateQueries({ queryKey: ['my-branches'] });
+    }
+  };
+
+  const images = branch.images ?? [];
+
+  return (
+    <>
+      <label className="btn-primary w-full flex items-center justify-center cursor-pointer">
+        <ImagePlus className="w-4 h-4 mr-2" />
+        {uploading
+          ? (lang === 'UZ' ? 'Yuklanmoqda...' : 'Загрузка...')
+          : (lang === 'UZ' ? 'Rasm qo\'shish' : 'Добавить фото')}
+        <input
+          type="file"
+          accept="image/*"
+          onChange={handleUpload}
+          disabled={uploading || images.length >= 10}
+          className="hidden"
+        />
+      </label>
+
+      <p className="text-xs text-tg-hint text-center">
+        {images.length}/10 {lang === 'UZ' ? 'rasm' : 'фото'}
+      </p>
+
+      {images.length === 0 && (
+        <Card className="!p-4 text-center">
+          <ImagePlus className="w-10 h-10 mx-auto text-tg-hint mb-2" />
+          <p className="text-sm text-tg-hint">
+            {lang === 'UZ'
+              ? 'Hali rasmlar yo\'q. Klub rasmlari mijozlarga ko\'rinadi.'
+              : 'Фото ещё нет. Фотографии клуба видны клиентам.'}
+          </p>
+        </Card>
+      )}
+
+      <div className="grid grid-cols-2 gap-2">
+        {images.map((img: any) => (
+          <div key={img.id} className="relative rounded-xl overflow-hidden">
+            <img src={img.url} alt="" className="w-full h-32 object-cover" />
+            <button
+              onClick={() => removeImage(img.id)}
+              className="absolute top-1 right-1 bg-black/50 text-white rounded-full p-1"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        ))}
+      </div>
     </>
   );
 }
