@@ -49,7 +49,7 @@ export async function routeByRole(
         reply_markup: webAppButton(lang === 'UZ' ? '🛠 WebApp ochish' : '🛠 Открыть WebApp', '/admin'),
       });
       await ctx.reply(t('common.home', lang), {
-        reply_markup: adminMainMenu(lang),
+        reply_markup: adminMainMenu(lang, user.role),
       });
       break;
     }

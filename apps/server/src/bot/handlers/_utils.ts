@@ -49,16 +49,19 @@ export function partnerMainMenu(lang: Lang) {
   return kb.resized();
 }
 
-export function adminMainMenu(lang: Lang) {
+export function adminMainMenu(lang: Lang, role: string = 'SUPER_ADMIN') {
   const kb = new Keyboard()
-    .text(lang === 'UZ' ? '👥 Hamkorlar' : '👥 Партнёры')
+    .text(lang === 'UZ' ? '💳 To\'lovlar' : '💳 Платежи')
     .text(lang === 'UZ' ? '📨 Arizalar' : '📨 Заявки')
     .row()
-    .text(lang === 'UZ' ? '📊 Statistika' : '📊 Статистика')
-    .text(lang === 'UZ' ? '💰 Yechib olish' : '💰 Выводы')
-    .row()
-    .text(lang === 'UZ' ? '📢 Broadcast' : '📢 Рассылка')
-    .text(lang === 'UZ' ? '⚙️ Sozlamalar' : '⚙️ Настройки');
+    .text(lang === 'UZ' ? '👥 Hamkorlar' : '👥 Партнёры')
+    .text(lang === 'UZ' ? '📊 Statistika' : '📊 Статистика');
+  if (role === 'SUPER_ADMIN') {
+    kb.row()
+      .text(lang === 'UZ' ? '💰 Yechib olish' : '💰 Выводы')
+      .text(lang === 'UZ' ? '📢 Broadcast' : '📢 Рассылка');
+  }
+  kb.row().text(lang === 'UZ' ? '⚙️ Sozlamalar' : '⚙️ Настройки');
   return kb.resized();
 }
 

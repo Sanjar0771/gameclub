@@ -598,8 +598,14 @@ export async function adminRoutes(app: FastifyInstance) {
       await prisma.user.update({ where: { id: user.id }, data: { role: Role.PRE_ADMIN } });
     }
     const userCtx = (req as any).user;
-    const pa = await prisma.preAdmin.create({
-      data: {
+    // Agar bu user uchun preAdmin mavjud bo'lsa — yangilaymiz, bo'lmasa yaratamiz
+    const pa = await prisma.preAdmin.upsert({
+      where: { userId: user.id },
+      update: {
+        login: body.login,
+        passwordHash: hash,
+      },
+      create: {
         userId: user.id,
         login: body.login,
         passwordHash: hash,
