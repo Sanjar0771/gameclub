@@ -352,11 +352,8 @@ export async function adminRoutes(app: FastifyInstance) {
     };
   });
 
-  // === To'lovni tasdiqlash (faqat super-admin) ===
+  // === To'lovni tasdiqlash (super-admin + pre-admin) ===
   app.post('/payments/:id/confirm', async (req, reply) => {
-    if (!isSuper(req)) {
-      return reply.code(403).send({ ok: false, error: { code: 'FORBIDDEN', message: 'Faqat super-admin' } });
-    }
     const userCtx = (req as any).user;
     const { id } = req.params as { id: string };
     const payment = await prisma.payment.findUnique({ where: { id }, include: { booking: true } });
@@ -386,7 +383,7 @@ export async function adminRoutes(app: FastifyInstance) {
 
     await audit({
       actorId: userCtx.userId,
-      actorRole: 'SUPER_ADMIN',
+      actorRole: userCtx.role,
       action: 'PAYMENT_CONFIRMED',
       targetType: 'Payment',
       targetId: id,
@@ -396,9 +393,6 @@ export async function adminRoutes(app: FastifyInstance) {
   });
 
   app.post('/payments/:id/reject', async (req, reply) => {
-    if (!isSuper(req)) {
-      return reply.code(403).send({ ok: false, error: { code: 'FORBIDDEN', message: 'Faqat super-admin' } });
-    }
     const userCtx = (req as any).user;
     const { id } = req.params as { id: string };
     const body = req.body as { reason?: string };

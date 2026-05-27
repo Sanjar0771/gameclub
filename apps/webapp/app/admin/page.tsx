@@ -99,9 +99,9 @@ export default function AdminDashboard() {
           <Tile href="/admin/pending" icon={<Users />} label={lang === 'UZ' ? 'Arizalar' : 'Заявки'} color="bg-blue-500" />
           <Tile href="/admin/partners" icon={<Building2 />} label={lang === 'UZ' ? 'Hamkorlar' : 'Партнёры'} color="bg-green-500" />
           <Tile href="/admin/complaints" icon={<MessageSquare />} label={lang === 'UZ' ? 'Shikoyatlar' : 'Жалобы'} color="bg-orange-500" />
+          <Tile href="/admin/payments" icon={<CreditCard />} label={lang === 'UZ' ? 'To\'lovlar' : 'Платежи'} color="bg-pink-500" />
           {isSuper && (
             <>
-              <Tile href="/admin/payments" icon={<CreditCard />} label={lang === 'UZ' ? 'To\'lovlar' : 'Платежи'} color="bg-pink-500" />
               <Tile href="/admin/withdrawals" icon={<Wallet />} label={lang === 'UZ' ? 'Yechishlar' : 'Выводы'} color="bg-teal-500" />
               <Tile href="/admin/pre-admins" icon={<Shield />} label={lang === 'UZ' ? 'Pre-adminlar' : 'Пре-админы'} color="bg-indigo-500" />
               <Tile href="/admin/bot-texts" icon={<Settings />} label={lang === 'UZ' ? 'Bot matnlari' : 'Тексты бота'} color="bg-gray-500" />
