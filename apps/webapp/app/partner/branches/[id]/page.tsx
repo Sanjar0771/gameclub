@@ -98,7 +98,7 @@ export default function PartnerBranchDetail() {
               <button
                 onClick={async () => {
                   try {
-                    await navigator.clipboard.writeText(branch.cardNumber);
+                    await navigator.clipboard.writeText(branch.cardNumber ?? '');
                     setCardCopied(true);
                     hapticImpact('medium');
                     setTimeout(() => setCardCopied(false), 2000);
@@ -107,7 +107,7 @@ export default function PartnerBranchDetail() {
                 className="w-full flex items-center justify-between bg-tg-secondary-bg p-3 rounded-xl active:scale-[0.99]"
               >
                 <span className="font-mono text-lg tracking-wider">
-                  {branch.cardNumber.replace(/(\d{4})/g, '$1 ').trim()}
+                  {(branch.cardNumber ?? '').replace(/(\d{4})/g, '$1 ').trim() || '—'}
                 </span>
                 {cardCopied ? (
                   <Check className="w-5 h-5 text-green-500" />

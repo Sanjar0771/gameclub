@@ -4,6 +4,11 @@ import { startApi } from './api/index.js';
 import { startBot, stopBot } from './bot/index.js';
 import { startCronJobs } from './jobs/index.js';
 
+// BigInt ni JSON serialize qilish uchun (Prisma telegramId BigInt qaytaradi)
+(BigInt.prototype as any).toJSON = function () {
+  return this.toString();
+};
+
 process.env.TZ = config.TZ;
 
 async function main() {
