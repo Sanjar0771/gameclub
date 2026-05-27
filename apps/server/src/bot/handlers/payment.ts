@@ -3,7 +3,7 @@ import { prisma, BookingStatus, PaymentStatus } from '@gameclub/db';
 import type { BotContext } from '../index.js';
 import { getDbUser, getLang } from './_utils.js';
 import { log } from '../../lib/logger.js';
-import { uploadTelegramFileToCloudinary } from '../../lib/cloudinary.js';
+import { uploadTelegramFileToCloudinary, getTelegramFileUrl } from '../../lib/cloudinary.js';
 import { notifySuperAdmin } from '../../services/notifications.js';
 
 export function registerPaymentHandlers(bot: Bot<BotContext>) {
@@ -44,9 +44,13 @@ export function registerPaymentHandlers(bot: Bot<BotContext>) {
     try {
       receiptUrl = await uploadTelegramFileToCloudinary(bestPhoto.file_id);
     } catch (e) {
-      log.error('Receipt upload failed', e);
+      log.error('Receipt upload failed (Cloudinary), trying direct Telegram URL', e);
     }
 
+    // Cloudinary ishlamasa — Telegram HTTPS URL ishlatamiz (brauzerda ochiladi)
+    if (!receiptUrl) {
+      receiptUrl = await getTelegramFileUrl(bestPhoto.file_id);
+    }
     const finalUrl = receiptUrl ?? `tg://file/${bestPhoto.file_id}`;
 
     await prisma.payment.update({

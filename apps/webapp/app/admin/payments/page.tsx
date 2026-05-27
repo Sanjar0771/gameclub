@@ -72,17 +72,20 @@ export default function PendingPayments() {
                 <div>{lang === 'UZ' ? 'Karta' : 'Карта'}: {p.cardNumber}</div>
                 <div>{lang === 'UZ' ? 'PC' : 'ПК'}: {p.booking?.computer?.name}</div>
               </div>
-              {p.receiptImage && (
-                <a
-                  href={p.receiptImage}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-2 flex items-center gap-1 text-tg-link text-sm"
-                >
-                  <ImageIcon className="w-4 h-4" />
-                  {lang === 'UZ' ? 'Chek rasmini ochish' : 'Открыть чек'}
-                  <ExternalLink className="w-3 h-3" />
-                </a>
+              {p.receiptImage && !p.receiptImage.startsWith('tg://') && (
+                <div className="mt-2">
+                  <img
+                    src={p.receiptImage}
+                    alt="Chek"
+                    className="w-full max-h-64 object-contain rounded-lg border border-tg-section-separator"
+                    onClick={() => window.open(p.receiptImage, '_blank')}
+                  />
+                </div>
+              )}
+              {p.receiptImage && p.receiptImage.startsWith('tg://') && (
+                <div className="mt-2 p-2 bg-yellow-50 rounded-lg text-xs text-yellow-700">
+                  {lang === 'UZ' ? '⚠️ Chek rasmi faqat Telegram ichida ko\'rinadi' : '⚠️ Чек виден только в Telegram'}
+                </div>
               )}
               <div className="flex gap-2 mt-3">
                 <button onClick={() => confirm(p.id)} className="btn-primary flex-1 !py-2 text-sm">
