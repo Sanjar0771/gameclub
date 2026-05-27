@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Plus, Edit3, Power, Users, Tag, Monitor, ImagePlus, Trash2 } from 'lucide-react';
+import { Plus, Edit3, Power, Users, Tag, Monitor, ImagePlus, Trash2, CreditCard, Copy, Check } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/store';
 import { PageHeader } from '@/components/ui/PageHeader';
@@ -17,6 +17,7 @@ export default function PartnerBranchDetail() {
   const { lang } = useAuth();
   const qc = useQueryClient();
   const [tab, setTab] = useState<'overview' | 'images' | 'computers' | 'pricing' | 'bookings' | 'assistants'>('overview');
+  const [cardCopied, setCardCopied] = useState(false);
 
   const { data: branches, isLoading } = useQuery({
     queryKey: ['my-branches'],
@@ -82,10 +83,46 @@ export default function PartnerBranchDetail() {
               </div>
               <div className="space-y-1 text-sm">
                 <div><span className="text-tg-hint">{lang === 'UZ' ? 'Manzil' : 'Адрес'}:</span> {branch.address}</div>
-                <div><span className="text-tg-hint">{lang === 'UZ' ? 'Ish vaqti' : 'Часы'}:</span> {branch.openTime} — {branch.closeTime}</div>
-                <div><span className="text-tg-hint">{lang === 'UZ' ? 'Karta' : 'Карта'}:</span> {branch.cardNumber.slice(0, 4)}****{branch.cardNumber.slice(-4)}</div>
+                <div><span className="text-tg-hint">{lang === 'UZ' ? 'Ish vaqti' : 'Часы'}:</span> {branch.worksAroundClock ? '24/7' : `${branch.openTime} — ${branch.closeTime}`}</div>
+                {branch.phone && <div><span className="text-tg-hint">{lang === 'UZ' ? 'Telefon' : 'Телефон'}:</span> {branch.phone}</div>}
                 <div><span className="text-tg-hint">{lang === 'UZ' ? 'Komissiya' : 'Комиссия'}:</span> {branch.commissionPct}%</div>
               </div>
+            </Card>
+
+            {/* Karta ma'lumotlari */}
+            <Card>
+              <div className="flex items-center gap-2 mb-3">
+                <CreditCard className="w-5 h-5 text-brand-600" />
+                <h3 className="font-semibold">{lang === 'UZ' ? 'To\'lov kartasi' : 'Платёжная карта'}</h3>
+              </div>
+              <button
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(branch.cardNumber);
+                    setCardCopied(true);
+                    hapticImpact('medium');
+                    setTimeout(() => setCardCopied(false), 2000);
+                  } catch {}
+                }}
+                className="w-full flex items-center justify-between bg-tg-secondary-bg p-3 rounded-xl active:scale-[0.99]"
+              >
+                <span className="font-mono text-lg tracking-wider">
+                  {branch.cardNumber.replace(/(\d{4})/g, '$1 ').trim()}
+                </span>
+                {cardCopied ? (
+                  <Check className="w-5 h-5 text-green-500" />
+                ) : (
+                  <Copy className="w-5 h-5 text-tg-hint" />
+                )}
+              </button>
+              {branch.cardHolderName && (
+                <div className="text-sm text-tg-hint mt-2">{branch.cardHolderName}</div>
+              )}
+              <p className="text-xs text-tg-hint mt-2">
+                {lang === 'UZ'
+                  ? 'Mijozlar shu kartaga pul o\'tkazadi. Kartani o\'zgartirish uchun "Tahrirlash" tugmasini bosing.'
+                  : 'Клиенты переводят деньги на эту карту. Для изменения нажмите "Редактировать".'}
+              </p>
             </Card>
 
             <button

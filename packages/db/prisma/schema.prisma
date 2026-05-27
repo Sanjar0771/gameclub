@@ -476,6 +476,7 @@ model Payment {
   booking        Booking       @relation(fields: [bookingId], references: [id], onDelete: Cascade)
   amount         Int
   cardNumber     String        // qaysi kartaga to'langan (filialning kartasi)
+  cardHolderName String?       // karta egasining ismi
   receiptImage   String?       // chek screenshot (Cloudinary)
   status         PaymentStatus @default(AWAITING_RECEIPT)
   uploadedAt     DateTime?

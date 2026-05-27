@@ -43,11 +43,15 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   if (hasBody) headers['Content-Type'] = 'application/json';
 
   try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000); // 15s timeout
     const res = await fetch(url, {
       method,
       headers,
       body: hasBody ? JSON.stringify(body) : undefined,
+      signal: controller.signal,
     });
+    clearTimeout(timeout);
     const json = await res.json().catch(() => null);
     if (!json || typeof json !== 'object') {
       return {

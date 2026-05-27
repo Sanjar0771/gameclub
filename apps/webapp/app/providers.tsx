@@ -41,42 +41,47 @@ function TelegramAuthBoot({ children }: { children: React.ReactNode }) {
     authDone.current = true;
 
     async function tryAuth(retries = 5): Promise<void> {
-      const initData = getInitData();
+      try {
+        const initData = getInitData();
 
-      // Agar initData hali yo'q bo'lsa — TG script yuklanmagan, kutamiz
-      if (!initData && retries > 0) {
-        await new Promise((r) => setTimeout(r, 200));
-        return tryAuth(retries - 1);
-      }
+        // Agar initData hali yo'q bo'lsa — TG script yuklanmagan, kutamiz
+        if (!initData && retries > 0) {
+          await new Promise((r) => setTimeout(r, 200));
+          return tryAuth(retries - 1);
+        }
 
-      if (!initData) {
-        // Telegram tashqarisida (browser) — localStorage'dan token bor bo'lishi mumkin
-        const existingToken = getAuthToken();
-        if (existingToken) {
-          try {
-            const me = await api.get<AuthUser>('/api/common/me');
-            if (me.ok) {
-              setUser(me.data);
-              setReady(true);
-              return;
+        if (!initData) {
+          // Telegram tashqarisida (browser) — localStorage'dan token bor bo'lishi mumkin
+          const existingToken = getAuthToken();
+          if (existingToken) {
+            try {
+              const me = await api.get<AuthUser>('/api/common/me');
+              if (me.ok) {
+                setUser(me.data);
+                setReady(true);
+                return;
+              }
+            } catch {
+              // token yaroqsiz
             }
-          } catch {
-            // token yaroqsiz
+          }
+          setReady(true);
+          return;
+        }
+
+        // Telegram ichida — initData bilan login
+        const res = await loginWithTelegram();
+        if (res.ok) {
+          const me = await api.get<AuthUser>('/api/common/me');
+          if (me.ok) {
+            setUser(me.data);
           }
         }
+      } catch (err) {
+        console.error('[tryAuth] xato:', err);
+      } finally {
         setReady(true);
-        return;
       }
-
-      // Telegram ichida — initData bilan login
-      const res = await loginWithTelegram();
-      if (res.ok) {
-        const me = await api.get<AuthUser>('/api/common/me');
-        if (me.ok) {
-          setUser(me.data);
-        }
-      }
-      setReady(true);
     }
 
     const tg = getTelegramWebApp();
@@ -90,7 +95,7 @@ function TelegramAuthBoot({ children }: { children: React.ReactNode }) {
       }
     }
 
-    tryAuth();
+    tryAuth().catch(() => setReady(true));
   }, [setReady, setUser]);
 
   // Routing — role bo'yicha yo'naltirish

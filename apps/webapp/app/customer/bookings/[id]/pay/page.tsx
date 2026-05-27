@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
-import { Copy, Check, MessageCircle } from 'lucide-react';
+import { Copy, Check, MessageCircle, CreditCard, User } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/store';
 import { PageHeader } from '@/components/ui/PageHeader';
@@ -15,7 +15,7 @@ export default function PaymentPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const { lang } = useAuth();
-  const [copied, setCopied] = useState(false);
+  const [copied, setCopied] = useState<'card' | 'amount' | null>(null);
 
   const { data: bookings } = useQuery({
     queryKey: ['my-bookings'],
@@ -29,16 +29,21 @@ export default function PaymentPage() {
   if (!booking) return <LoadingScreen />;
 
   const cardNumber = booking.payment?.cardNumber ?? '';
+  const cardHolderName = booking.payment?.cardHolderName ?? '';
   const formattedCard = cardNumber.replace(/(\d{4})/g, '$1 ').trim();
+  const amount = booking.totalAmount;
 
-  const copyCard = async () => {
+  const copyToClipboard = async (text: string, type: 'card' | 'amount') => {
     try {
-      await navigator.clipboard.writeText(cardNumber);
-      setCopied(true);
+      await navigator.clipboard.writeText(text);
+      setCopied(type);
       hapticNotification('success');
-      setTimeout(() => setCopied(false), 2000);
+      setTimeout(() => setCopied(null), 2000);
     } catch {
-      await showAlert(lang === 'UZ' ? 'Karta raqami: ' + cardNumber : 'Карта: ' + cardNumber);
+      await showAlert(type === 'card'
+        ? (lang === 'UZ' ? 'Karta raqami: ' + text : 'Карта: ' + text)
+        : (lang === 'UZ' ? 'Summa: ' + text : 'Сумма: ' + text)
+      );
     }
   };
 
@@ -54,38 +59,63 @@ export default function PaymentPage() {
       <PageHeader title={lang === 'UZ' ? 'To\'lov' : 'Оплата'} backHref="/customer/bookings" />
 
       <div className="px-4 py-4 space-y-4">
+        {/* Summa */}
         <Card>
           <div className="text-center mb-4">
             <div className="text-sm text-tg-hint mb-1">
               {lang === 'UZ' ? 'To\'lash kerak' : 'К оплате'}
             </div>
             <div className="text-3xl font-bold text-brand-600">
-              {formatPrice(booking.totalAmount)} <span className="text-lg">{lang === 'UZ' ? 'so\'m' : 'сум'}</span>
+              {formatPrice(amount)} <span className="text-lg">{lang === 'UZ' ? 'so\'m' : 'сум'}</span>
             </div>
           </div>
 
-          <div className="text-sm text-tg-hint mb-2">
+          {/* Summani nusxa olish */}
+          <button
+            onClick={() => copyToClipboard(String(amount), 'amount')}
+            className="w-full flex items-center justify-between bg-tg-secondary-bg p-2.5 rounded-xl active:scale-[0.99] mb-3"
+          >
+            <span className="text-sm text-tg-hint">{lang === 'UZ' ? 'Summani nusxa olish' : 'Скопировать сумму'}</span>
+            {copied === 'amount' ? (
+              <Check className="w-4 h-4 text-green-500" />
+            ) : (
+              <Copy className="w-4 h-4 text-tg-hint" />
+            )}
+          </button>
+
+          {/* Karta raqami */}
+          <div className="text-sm text-tg-hint mb-2 flex items-center gap-1.5">
+            <CreditCard className="w-4 h-4" />
             {lang === 'UZ' ? 'Karta raqami' : 'Номер карты'}
           </div>
           <button
-            onClick={copyCard}
+            onClick={() => copyToClipboard(cardNumber, 'card')}
             className="w-full flex items-center justify-between bg-tg-secondary-bg p-3 rounded-xl active:scale-[0.99]"
           >
             <span className="font-mono text-lg tracking-wider">{formattedCard || '****'}</span>
-            {copied ? (
+            {copied === 'card' ? (
               <Check className="w-5 h-5 text-green-500" />
             ) : (
               <Copy className="w-5 h-5 text-tg-hint" />
             )}
           </button>
-          <div className="text-xs text-tg-hint text-center mt-2">
+
+          {/* Karta egasi */}
+          {cardHolderName && (
+            <div className="flex items-center gap-1.5 mt-2 text-sm text-tg-hint">
+              <User className="w-4 h-4" />
+              <span>{cardHolderName}</span>
+            </div>
+          )}
+
+          <div className="text-xs text-tg-hint text-center mt-3">
             {lang === 'UZ' ? 'Bosing va karta raqamini nusxa oling' : 'Нажмите, чтобы скопировать номер'}
           </div>
         </Card>
 
         <Card>
           <h3 className="font-semibold mb-3">
-            {lang === 'UZ' ? '📋 Ko\'rsatmalar' : '📋 Инструкции'}
+            {lang === 'UZ' ? 'Ko\'rsatmalar' : 'Инструкции'}
           </h3>
           <ol className="space-y-3 text-sm">
             <Step n={1}>

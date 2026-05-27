@@ -69,7 +69,7 @@ export default function PendingPayments() {
               </div>
               <div className="text-xs space-y-0.5 text-tg-hint">
                 <div>{lang === 'UZ' ? 'Mijoz' : 'Клиент'}: {p.booking?.customer?.firstName} (TG: {p.booking?.customer?.telegramId})</div>
-                <div>{lang === 'UZ' ? 'Karta' : 'Карта'}: {p.cardNumber}</div>
+                <div>{lang === 'UZ' ? 'Karta' : 'Карта'}: {p.cardNumber?.replace(/(\d{4})/g, '$1 ').trim()}{p.cardHolderName ? ` (${p.cardHolderName})` : ''}</div>
                 <div>{lang === 'UZ' ? 'PC' : 'ПК'}: {p.booking?.computer?.name}</div>
               </div>
               {p.receiptImage && !p.receiptImage.startsWith('tg://') && (

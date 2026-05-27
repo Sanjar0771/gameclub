@@ -161,16 +161,21 @@ export default function EditBranchPage() {
           <h3 className="font-semibold mb-3">{lang === 'UZ' ? 'To\'lov ma\'lumotlari' : 'Платёжные данные'}</h3>
           <Field label={lang === 'UZ' ? 'Karta raqami *' : 'Номер карты *'}>
             <input
-              value={form.cardNumber}
+              value={form.cardNumber.replace(/(\d{4})/g, '$1 ').trim()}
               onChange={(e) => setForm({ ...form, cardNumber: e.target.value.replace(/\D/g, '').slice(0, 16) })}
-              className="input"
+              className="input font-mono tracking-wider"
               placeholder="8600 1234 5678 9012"
               inputMode="numeric"
             />
           </Field>
           <Field label={lang === 'UZ' ? 'Karta egasi' : 'Владелец карты'}>
-            <input value={form.cardHolderName} onChange={(e) => setForm({ ...form, cardHolderName: e.target.value })} className="input" />
+            <input value={form.cardHolderName} onChange={(e) => setForm({ ...form, cardHolderName: e.target.value })} className="input" placeholder={lang === 'UZ' ? 'Ism Familiya' : 'Имя Фамилия'} />
           </Field>
+          <p className="text-xs text-tg-hint mt-2">
+            {lang === 'UZ'
+              ? 'Kartani o\'zgartirganingizda, faqat YANGI bronlar uchun yangi karta ko\'rsatiladi. Oldingi bronlar eski kartaga to\'lanadi.'
+              : 'При смене карты новая будет показана только для НОВЫХ бронирований. Старые брони оплачиваются на предыдущую карту.'}
+          </p>
         </Card>
 
         <button onClick={submit} disabled={submitting} className="btn-primary w-full">

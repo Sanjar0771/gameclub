@@ -344,6 +344,7 @@ export async function customerRoutes(app: FastifyInstance) {
             create: {
               amount: total,
               cardNumber: computer.branch.cardNumber,
+              cardHolderName: computer.branch.cardHolderName,
               status: PaymentStatus.AWAITING_RECEIPT,
             },
           },
@@ -520,6 +521,7 @@ export async function customerRoutes(app: FastifyInstance) {
           create: {
             amount: total,
             cardNumber: orig.computer.branch.cardNumber,
+            cardHolderName: orig.computer.branch.cardHolderName,
             status: PaymentStatus.AWAITING_RECEIPT,
           },
         },
