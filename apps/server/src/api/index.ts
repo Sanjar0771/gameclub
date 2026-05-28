@@ -57,7 +57,7 @@ export async function buildApi(): Promise<FastifyInstance> {
   app.get('/health', async () => ({ ok: true, ts: Date.now() }));
   app.get('/api/health', async () => ({ ok: true, ts: Date.now() }));
 
-  // Dev: barcha pending hamkorlarni tasdiqlash (secret bilan himoyalangan)
+  // Dev: hamkorlar va foydalanuvchilarni boshqarish (secret bilan himoyalangan)
   app.post('/api/dev/approve-pending', async (req, reply) => {
     const body = req.body as { secret?: string };
     if (body?.secret !== config.BOT_TOKEN) {
@@ -72,6 +72,39 @@ export async function buildApi(): Promise<FastifyInstance> {
       });
     }
     return { ok: true, data: { approved: pending.length } };
+  });
+
+  app.post('/api/dev/partners-info', async (req, reply) => {
+    const body = req.body as { secret?: string };
+    if (body?.secret !== config.BOT_TOKEN) {
+      return reply.code(403).send({ ok: false, error: { code: 'FORBIDDEN', message: 'Invalid secret' } });
+    }
+    const { prisma } = await import('@gameclub/db');
+    const partners = await prisma.partner.findMany({
+      include: { user: { select: { telegramId: true, role: true, firstName: true } } },
+    });
+    const users = await prisma.user.findMany({
+      where: { role: { in: ['PARTNER', 'SUPER_ADMIN', 'PRE_ADMIN'] } },
+      select: { id: true, telegramId: true, role: true, firstName: true },
+    });
+    return {
+      ok: true,
+      data: {
+        partners: partners.map((p) => ({
+          id: p.id,
+          status: p.status,
+          fullName: p.fullName,
+          telegramId: p.user.telegramId.toString(),
+          userRole: p.user.role,
+        })),
+        users: users.map((u) => ({
+          id: u.id,
+          telegramId: u.telegramId.toString(),
+          role: u.role,
+          firstName: u.firstName,
+        })),
+      },
+    };
   });
 
   // Routes
