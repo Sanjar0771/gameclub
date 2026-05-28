@@ -57,6 +57,23 @@ export async function buildApi(): Promise<FastifyInstance> {
   app.get('/health', async () => ({ ok: true, ts: Date.now() }));
   app.get('/api/health', async () => ({ ok: true, ts: Date.now() }));
 
+  // Dev: barcha pending hamkorlarni tasdiqlash (secret bilan himoyalangan)
+  app.post('/api/dev/approve-pending', async (req, reply) => {
+    const body = req.body as { secret?: string };
+    if (body?.secret !== config.BOT_TOKEN) {
+      return reply.code(403).send({ ok: false, error: { code: 'FORBIDDEN', message: 'Invalid secret' } });
+    }
+    const { prisma, PartnerStatus } = await import('@gameclub/db');
+    const pending = await prisma.partner.findMany({ where: { status: PartnerStatus.PENDING } });
+    for (const p of pending) {
+      await prisma.partner.update({
+        where: { id: p.id },
+        data: { status: PartnerStatus.APPROVED, approvedAt: new Date() },
+      });
+    }
+    return { ok: true, data: { approved: pending.length } };
+  });
+
   // Routes
   await app.register(authRoutes, { prefix: '/api/auth' });
   await app.register(commonRoutes, { prefix: '/api/common' });
