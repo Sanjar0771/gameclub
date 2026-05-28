@@ -12,6 +12,12 @@ export interface AuthUser {
   language: Lang;
   role: 'SUPER_ADMIN' | 'PRE_ADMIN' | 'PARTNER' | 'ASSISTANT' | 'CUSTOMER';
   phone?: string | null;
+  partner?: {
+    id: string;
+    fullName: string;
+    phone: string;
+    status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'BANNED';
+  } | null;
 }
 
 interface AuthState {

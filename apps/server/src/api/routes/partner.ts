@@ -41,7 +41,15 @@ export async function partnerRoutes(app: FastifyInstance) {
     if (!partner) {
       return { ok: false, error: { code: 'NOT_FOUND', message: 'Hamkor topilmadi' } };
     }
-    return { ok: true, data: partner.branches };
+    // BigInt telegramId ni string ga aylantirish (assistants ichida user bor)
+    const branches = partner.branches.map((b) => ({
+      ...b,
+      assistants: b.assistants.map((a) => ({
+        ...a,
+        user: { ...a.user, telegramId: a.user.telegramId.toString() },
+      })),
+    }));
+    return { ok: true, data: branches };
   });
 
   // === Filial yaratish ===

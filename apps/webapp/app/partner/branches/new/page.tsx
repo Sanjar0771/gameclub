@@ -11,8 +11,15 @@ import { hapticNotification, showAlert } from '@/lib/telegram';
 
 export default function NewBranchPage() {
   const router = useRouter();
-  const { lang } = useAuth();
+  const { lang, user } = useAuth();
   const [submitting, setSubmitting] = useState(false);
+
+  // Partner tasdiqlangan bo'lmasa — yo'naltirish
+  useEffect(() => {
+    if (user?.partner?.status !== 'APPROVED') {
+      router.replace('/partner/branches');
+    }
+  }, [user, router]);
   const [form, setForm] = useState({
     name: '',
     description: '',
