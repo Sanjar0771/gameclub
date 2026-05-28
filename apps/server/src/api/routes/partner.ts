@@ -458,8 +458,9 @@ export async function partnerRoutes(app: FastifyInstance) {
           branchId: parse.data.branchId,
           amount: parse.data.amount,
           cardNumber: branch.cardNumber,
+          cardHolderName: (branch as any).cardHolderName ?? null,
           status: WithdrawalStatus.REQUESTED,
-        },
+        } as any,
       });
       await tx.balance.update({
         where: { branchId: parse.data.branchId },

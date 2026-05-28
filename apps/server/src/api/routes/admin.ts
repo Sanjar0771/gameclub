@@ -464,6 +464,7 @@ export async function adminRoutes(app: FastifyInstance) {
     }
     const userCtx = (req as any).user;
     const { id } = req.params as { id: string };
+    const body = req.body as { receiptImage?: string };
     const w = await prisma.withdrawal.findUnique({ where: { id }, include: { branch: { include: { partner: true } } } });
     if (!w) return reply.code(404).send({ ok: false, error: { code: 'NOT_FOUND', message: 'Topilmadi' } });
 
@@ -474,7 +475,8 @@ export async function adminRoutes(app: FastifyInstance) {
           status: WithdrawalStatus.COMPLETED,
           processedAt: new Date(),
           processedBy: userCtx.userId,
-        },
+          receiptImage: body?.receiptImage ?? null,
+        } as any,
       });
       await tx.balance.update({
         where: { branchId: w.branchId },
@@ -482,15 +484,53 @@ export async function adminRoutes(app: FastifyInstance) {
       });
     });
 
+    // Hamkorga xabar yuborish
     try {
-      await notifyUser({
-        userId: w.branch.partner.userId,
-        type: 'WITHDRAWAL_PROCESSED',
-        titleUz: '✅ Pul o\'tkazildi',
-        titleRu: '✅ Деньги переведены',
-        bodyUz: `${w.amount} so'm sizning kartangizga o'tkazildi.`,
-        bodyRu: `${w.amount} сум переведено на вашу карту.`,
-      });
+      const { bot } = await import('../../bot/index.js');
+      const partner = w.branch.partner;
+      const partnerUser = await prisma.user.findUnique({ where: { id: partner.userId } });
+      if (partnerUser) {
+        const lang = partnerUser.language;
+        const amount = w.amount.toLocaleString('ru-RU');
+        const card = w.cardNumber.replace(/(\d{4})/g, '$1 ').trim();
+
+        // Agar admin chek yuklagan bo'lsa — rasm bilan yuborish
+        if (body?.receiptImage && !body.receiptImage.startsWith('tg://')) {
+          try {
+            await bot.api.sendPhoto(
+              partnerUser.telegramId.toString(),
+              body.receiptImage,
+              {
+                caption: lang === 'UZ'
+                  ? `✅ <b>Pul o'tkazildi!</b>\n\n💰 Summa: ${amount} so'm\n💳 Karta: <code>${card}</code>\n\n📋 O'tkazma cheki yuqorida.`
+                  : `✅ <b>Деньги переведены!</b>\n\n💰 Сумма: ${amount} сум\n💳 Карта: <code>${card}</code>\n\n📋 Чек перевода выше.`,
+                parse_mode: 'HTML',
+              },
+            );
+          } catch (e) {
+            // Rasm yuborilmasa — matn bilan yuboramiz
+            console.error('Receipt photo send failed:', e);
+            await notifyUser({
+              userId: partner.userId,
+              type: 'WITHDRAWAL_PROCESSED',
+              titleUz: '✅ Pul o\'tkazildi',
+              titleRu: '✅ Деньги переведены',
+              bodyUz: `${amount} so'm kartangizga o'tkazildi.\nKarta: ${card}`,
+              bodyRu: `${amount} сум переведено на карту.\nКарта: ${card}`,
+            });
+          }
+        } else {
+          // Cheksiz — faqat matn
+          await notifyUser({
+            userId: partner.userId,
+            type: 'WITHDRAWAL_PROCESSED',
+            titleUz: '✅ Pul o\'tkazildi',
+            titleRu: '✅ Деньги переведены',
+            bodyUz: `${amount} so'm kartangizga o'tkazildi.\nKarta: ${card}`,
+            bodyRu: `${amount} сум переведено на карту.\nКарта: ${card}`,
+          });
+        }
+      }
     } catch (e) {
       console.error('Withdrawal notification failed:', e);
     }

@@ -74,12 +74,32 @@ export function registerPaymentHandlers(bot: Bot<BotContext>) {
         : `✅ Чек принят!\n\nБронь: ${booking.code}\nФилиал: ${booking.branch.name}\nСумма: ${booking.totalAmount.toLocaleString('ru-RU')} сум\n\n📋 После проверки администратором будет отправлен QR-код.\n\n⏱️ Обычно занимает 5-15 минут.`,
     );
 
-    await notifySuperAdmin({
-      titleUz: '💳 Yangi to\'lov chek',
-      titleRu: '💳 Новый чек оплаты',
-      bodyUz: `${booking.branch.name}\nMijoz: ${user.firstName ?? '—'}\nSumma: ${booking.totalAmount.toLocaleString('ru-RU')} so'm\nBron: ${booking.code}`,
-      bodyRu: `${booking.branch.name}\nКлиент: ${user.firstName ?? '—'}\nСумма: ${booking.totalAmount.toLocaleString('ru-RU')} сум\nБронь: ${booking.code}`,
+    // Super adminga chek rasmini yuborish (matn emas, rasm bilan)
+    const card = (booking.branch as any).cardNumber ?? '';
+    const cardFormatted = card.replace(/(\d{4})/g, '$1 ').trim();
+    const admins = await prisma.user.findMany({
+      where: { role: 'SUPER_ADMIN', isActive: true },
     });
+    for (const admin of admins) {
+      try {
+        const aLang = admin.language;
+        const caption = aLang === 'UZ'
+          ? `💳 <b>Yangi to'lov chek</b>\n\n📍 ${booking.branch.name}\n👤 Mijoz: ${user.firstName ?? '—'} (TG: ${user.telegramId})\n💰 Summa: ${booking.totalAmount.toLocaleString('ru-RU')} so'm\n💳 Karta: <code>${cardFormatted}</code>\n🔢 Bron: ${booking.code}\n\n👆 Chek rasmi yuqorida. WebApp'da tasdiqlang.`
+          : `💳 <b>Новый чек оплаты</b>\n\n📍 ${booking.branch.name}\n👤 Клиент: ${user.firstName ?? '—'} (TG: ${user.telegramId})\n💰 Сумма: ${booking.totalAmount.toLocaleString('ru-RU')} сум\n💳 Карта: <code>${cardFormatted}</code>\n🔢 Бронь: ${booking.code}\n\n👆 Чек выше. Подтвердите в WebApp.`;
+
+        if (finalUrl && !finalUrl.startsWith('tg://')) {
+          await ctx.api.sendPhoto(admin.telegramId.toString(), finalUrl, {
+            caption,
+            parse_mode: 'HTML',
+          });
+        } else {
+          // Rasm URL ishlamasa — matn yuboramiz
+          await ctx.api.sendMessage(admin.telegramId.toString(), caption, { parse_mode: 'HTML' });
+        }
+      } catch (e) {
+        log.warn(`Admin notify failed: ${admin.telegramId}`, e);
+      }
+    }
 
     log.info(`💳 Receipt uploaded: booking ${booking.id}`);
   });

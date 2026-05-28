@@ -515,8 +515,10 @@ model Withdrawal {
   branch       Branch           @relation(fields: [branchId], references: [id], onDelete: Cascade)
   amount       Int
   cardNumber   String           // qaysi kartaga
+  cardHolderName String?        // karta egasi ismi
   status       WithdrawalStatus @default(REQUESTED)
   note         String?
+  receiptImage String?          // admin o'tkazma cheki (screenshot)
   processedBy  String?          // super-admin user id
   processedAt  DateTime?
   rejectReason String?
