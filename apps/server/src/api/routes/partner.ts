@@ -642,7 +642,8 @@ export async function partnerRoutes(app: FastifyInstance) {
       // Base64 rasm — Telegram Bot API orqali saqlaymiz
       try {
         const base64Match = body.imageBase64.match(/^data:image\/\w+;base64,(.+)$/);
-        const buffer = Buffer.from(base64Match ? base64Match[1] : body.imageBase64, 'base64');
+        const rawB64 = base64Match?.[1] ?? body.imageBase64;
+        const buffer = Buffer.from(rawB64, 'base64');
         if (buffer.length > 5 * 1024 * 1024) {
           return reply.code(400).send({ ok: false, error: { code: 'VALIDATION', message: 'Rasm 5MB dan katta' } });
         }
