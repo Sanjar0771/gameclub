@@ -107,6 +107,33 @@ export async function buildApi(): Promise<FastifyInstance> {
     };
   });
 
+  // Dev: test balans qo'shish
+  app.post('/api/dev/add-balance', async (req, reply) => {
+    const body = req.body as { secret?: string; branchId?: string; amount?: number };
+    if (body?.secret !== config.BOT_TOKEN) {
+      return reply.code(403).send({ ok: false, error: { code: 'FORBIDDEN', message: 'Invalid secret' } });
+    }
+    const { prisma } = await import('@gameclub/db');
+    if (body.branchId) {
+      await prisma.balance.upsert({
+        where: { branchId: body.branchId },
+        update: { amount: { increment: body.amount ?? 100000 }, totalEarned: { increment: body.amount ?? 100000 } },
+        create: { branchId: body.branchId, amount: body.amount ?? 100000, totalEarned: body.amount ?? 100000 },
+      });
+      return { ok: true, data: { added: body.amount ?? 100000, branchId: body.branchId } };
+    }
+    // Hammaga qo'shish
+    const branches = await prisma.branch.findMany();
+    for (const b of branches) {
+      await prisma.balance.upsert({
+        where: { branchId: b.id },
+        update: { amount: { increment: body.amount ?? 100000 }, totalEarned: { increment: body.amount ?? 100000 } },
+        create: { branchId: b.id, amount: body.amount ?? 100000, totalEarned: body.amount ?? 100000 },
+      });
+    }
+    return { ok: true, data: { added: body.amount ?? 100000, branches: branches.length } };
+  });
+
   // Routes
   await app.register(authRoutes, { prefix: '/api/auth' });
   await app.register(commonRoutes, { prefix: '/api/common' });
