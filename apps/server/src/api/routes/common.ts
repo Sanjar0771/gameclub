@@ -2,11 +2,23 @@ import type { FastifyInstance } from 'fastify';
 import { prisma } from '@gameclub/db';
 import { REGIONS } from '@gameclub/shared';
 import { authenticate } from '../middleware.js';
+import { config } from '../../config.js';
 
 export async function commonRoutes(app: FastifyInstance) {
   // O'zbekiston viloyatlari va shaharlari
   app.get('/regions', async () => {
     return { ok: true, data: REGIONS };
+  });
+
+  // Platforma kartasi (to'lov uchun)
+  app.get('/payment-card', async () => {
+    return {
+      ok: true,
+      data: {
+        cardNumber: config.PLATFORM_CARD_NUMBER ?? null,
+        cardHolder: config.PLATFORM_CARD_HOLDER ?? null,
+      },
+    };
   });
 
   // Bot matnlari (super-admin tahrirlagan)

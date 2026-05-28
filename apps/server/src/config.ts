@@ -25,6 +25,10 @@ const envSchema = z.object({
   JWT_SECRET: z.string().min(32),
   JWT_EXPIRES_IN: z.string().default('7d'),
 
+  // Platforma kartasi (barcha to'lovlar shu kartaga tushadi)
+  PLATFORM_CARD_NUMBER: z.string().min(16).optional(),
+  PLATFORM_CARD_HOLDER: z.string().optional(),
+
   // QR
   QR_SECRET: z.string().min(32).optional(),
 

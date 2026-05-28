@@ -17,6 +17,7 @@ import { audit } from '../../lib/audit.js';
 import { verifyQrPayload } from '../../lib/qr.js';
 import { config } from '../../config.js';
 import { getTelegramFileUrl } from '../../lib/cloudinary.js';
+import { notifySuperAdmin } from '../../services/notifications.js';
 
 export async function partnerRoutes(app: FastifyInstance) {
   app.addHook('preHandler', requireRole('PARTNER'));
@@ -468,6 +469,17 @@ export async function partnerRoutes(app: FastifyInstance) {
       });
       return withdrawal;
     });
+
+    // Super adminga xabar yuborish
+    const partner = await prisma.partner.findUnique({ where: { userId: userCtx.userId } });
+    const cardFormatted = branch.cardNumber.replace(/(\d{4})/g, '$1 ').trim();
+    await notifySuperAdmin({
+      titleUz: '💸 Yangi pul yechish so\'rovi',
+      titleRu: '💸 Новый запрос на вывод',
+      bodyUz: `🏢 Hamkor: ${partner?.fullName ?? '—'}\n📍 Filial: ${branch.name}\n💰 Summa: ${parse.data.amount.toLocaleString('ru-RU')} so'm\n💳 Karta: <code>${cardFormatted}</code>\n\nWebApp'da tasdiqlang.`,
+      bodyRu: `🏢 Партнёр: ${partner?.fullName ?? '—'}\n📍 Филиал: ${branch.name}\n💰 Сумма: ${parse.data.amount.toLocaleString('ru-RU')} сум\n💳 Карта: <code>${cardFormatted}</code>\n\nПодтвердите в WebApp.`,
+    });
+
     return { ok: true, data: w };
   });
 

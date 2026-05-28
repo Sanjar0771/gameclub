@@ -5,6 +5,7 @@ import { getDbUser, getLang } from './_utils.js';
 import { log } from '../../lib/logger.js';
 import { uploadTelegramFileToCloudinary, getTelegramFileUrl } from '../../lib/cloudinary.js';
 import { notifySuperAdmin } from '../../services/notifications.js';
+import { config } from '../../config.js';
 
 export function registerPaymentHandlers(bot: Bot<BotContext>) {
   bot.on('message:photo', async (ctx) => {
@@ -75,7 +76,7 @@ export function registerPaymentHandlers(bot: Bot<BotContext>) {
     );
 
     // Super adminga chek rasmini yuborish (matn emas, rasm bilan)
-    const card = (booking.branch as any).cardNumber ?? '';
+    const card = config.PLATFORM_CARD_NUMBER ?? '';
     const cardFormatted = card.replace(/(\d{4})/g, '$1 ').trim();
     const admins = await prisma.user.findMany({
       where: { role: 'SUPER_ADMIN', isActive: true },

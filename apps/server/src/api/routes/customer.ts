@@ -13,6 +13,7 @@ import {
 } from '@gameclub/shared';
 import { requireRole } from '../middleware.js';
 import { audit } from '../../lib/audit.js';
+import { config } from '../../config.js';
 
 export async function customerRoutes(app: FastifyInstance) {
   app.addHook('preHandler', requireRole('CUSTOMER', 'PARTNER', 'ASSISTANT', 'PRE_ADMIN', 'SUPER_ADMIN'));
@@ -343,8 +344,8 @@ export async function customerRoutes(app: FastifyInstance) {
           payment: {
             create: {
               amount: total,
-              cardNumber: computer.branch.cardNumber,
-              cardHolderName: (computer.branch as any).cardHolderName ?? null,
+              cardNumber: config.PLATFORM_CARD_NUMBER ?? '',
+              cardHolderName: config.PLATFORM_CARD_HOLDER ?? null,
               status: PaymentStatus.AWAITING_RECEIPT,
             } as any,
           },
@@ -520,8 +521,8 @@ export async function customerRoutes(app: FastifyInstance) {
         payment: {
           create: {
             amount: total,
-            cardNumber: orig.computer.branch.cardNumber,
-            cardHolderName: (orig.computer.branch as any).cardHolderName ?? null,
+            cardNumber: config.PLATFORM_CARD_NUMBER ?? '',
+            cardHolderName: config.PLATFORM_CARD_HOLDER ?? null,
             status: PaymentStatus.AWAITING_RECEIPT,
           } as any,
         },

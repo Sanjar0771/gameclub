@@ -25,11 +25,19 @@ export default function PaymentPage() {
     },
   });
 
+  const { data: platformCard } = useQuery({
+    queryKey: ['platform-card'],
+    queryFn: async () => {
+      const res = await api.get<{ cardNumber: string | null; cardHolder: string | null }>('/api/common/payment-card');
+      return res.ok ? res.data : null;
+    },
+  });
+
   const booking = bookings?.find((b) => b.id === id);
   if (!booking) return <LoadingScreen />;
 
-  const cardNumber = booking.payment?.cardNumber ?? '';
-  const cardHolderName = booking.payment?.cardHolderName ?? '';
+  const cardNumber = platformCard?.cardNumber ?? booking.payment?.cardNumber ?? '';
+  const cardHolderName = platformCard?.cardHolder ?? booking.payment?.cardHolderName ?? '';
   const formattedCard = cardNumber.replace(/(\d{4})/g, '$1 ').trim();
   const amount = booking.totalAmount;
 
