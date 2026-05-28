@@ -65,24 +65,8 @@ export default function AdminWithdrawals() {
     if (!completingId) return;
     setCompleting(true);
 
-    // Agar chek yuklangan bo'lsa — avval serverga yuklash
-    let receiptUrl: string | null = null;
-    if (receiptBase64) {
-      // Base64 ni serverga yuboramiz — Telegram orqali saqlanadi
-      try {
-        const uploadRes = await api.post<{ url: string }>('/api/partner/branches/0/images', {
-          imageBase64: receiptBase64,
-        });
-        if (uploadRes.ok) {
-          receiptUrl = (uploadRes.data as any).url;
-        }
-      } catch {
-        // Rasm yuklanmasa davom etamiz
-      }
-    }
-
     const res = await api.post(`/api/admin/withdrawals/${completingId}/complete`, {
-      receiptImage: receiptUrl,
+      receiptBase64: receiptBase64 ?? undefined,
     });
     setCompleting(false);
 

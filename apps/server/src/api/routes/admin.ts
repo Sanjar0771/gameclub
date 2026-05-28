@@ -13,6 +13,8 @@ import { requireRole } from '../middleware.js';
 import { audit } from '../../lib/audit.js';
 import { sendBookingConfirmedWithQr, notifyUser } from '../../services/notifications.js';
 import { hashPassword } from './auth.js';
+import { config } from '../../config.js';
+import { getTelegramFileUrl } from '../../lib/cloudinary.js';
 
 export async function adminRoutes(app: FastifyInstance) {
   app.addHook('preHandler', requireRole('SUPER_ADMIN', 'PRE_ADMIN'));
@@ -464,9 +466,40 @@ export async function adminRoutes(app: FastifyInstance) {
     }
     const userCtx = (req as any).user;
     const { id } = req.params as { id: string };
-    const body = req.body as { receiptImage?: string };
+    const body = req.body as { receiptImage?: string; receiptBase64?: string };
     const w = await prisma.withdrawal.findUnique({ where: { id }, include: { branch: { include: { partner: true } } } });
     if (!w) return reply.code(404).send({ ok: false, error: { code: 'NOT_FOUND', message: 'Topilmadi' } });
+
+    // Chek rasmini yuklash (base64 bo'lsa Telegram orqali)
+    let receiptImageUrl = body?.receiptImage ?? null;
+    if (!receiptImageUrl && body?.receiptBase64) {
+      try {
+        const base64Match = body.receiptBase64.match(/^data:image\/\w+;base64,(.+)$/);
+        const rawB64 = base64Match?.[1] ?? body.receiptBase64;
+        const buffer = Buffer.from(rawB64, 'base64');
+        const formData = new FormData();
+        formData.append('chat_id', config.SUPER_ADMIN_TELEGRAM_ID.toString());
+        formData.append('photo', new Blob([buffer], { type: 'image/jpeg' }), 'receipt.jpg');
+        formData.append('caption', `🧾 Withdrawal receipt: ${id}`);
+        formData.append('disable_notification', 'true');
+        const sendRes = await fetch(`https://api.telegram.org/bot${config.BOT_TOKEN}/sendPhoto`, { method: 'POST', body: formData });
+        const sendData: any = await sendRes.json();
+        if (sendData.ok && sendData.result?.photo?.length > 0) {
+          const bestPhoto = sendData.result.photo[sendData.result.photo.length - 1];
+          receiptImageUrl = await getTelegramFileUrl(bestPhoto.file_id);
+          // Xabarni o'chirish
+          try {
+            await fetch(`https://api.telegram.org/bot${config.BOT_TOKEN}/deleteMessage`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ chat_id: config.SUPER_ADMIN_TELEGRAM_ID.toString(), message_id: sendData.result.message_id }),
+            });
+          } catch { /* ignore */ }
+        }
+      } catch (e) {
+        console.error('Receipt upload error:', e);
+      }
+    }
 
     await prisma.$transaction(async (tx) => {
       await tx.withdrawal.update({
@@ -475,7 +508,7 @@ export async function adminRoutes(app: FastifyInstance) {
           status: WithdrawalStatus.COMPLETED,
           processedAt: new Date(),
           processedBy: userCtx.userId,
-          receiptImage: body?.receiptImage ?? null,
+          receiptImage: receiptImageUrl,
         } as any,
       });
       await tx.balance.update({
@@ -495,11 +528,11 @@ export async function adminRoutes(app: FastifyInstance) {
         const card = w.cardNumber.replace(/(\d{4})/g, '$1 ').trim();
 
         // Agar admin chek yuklagan bo'lsa — rasm bilan yuborish
-        if (body?.receiptImage && !body.receiptImage.startsWith('tg://')) {
+        if (receiptImageUrl && !receiptImageUrl.startsWith('tg://')) {
           try {
             await bot.api.sendPhoto(
               partnerUser.telegramId.toString(),
-              body.receiptImage,
+              receiptImageUrl,
               {
                 caption: lang === 'UZ'
                   ? `✅ <b>Pul o'tkazildi!</b>\n\n💰 Summa: ${amount} so'm\n💳 Karta: <code>${card}</code>\n\n📋 O'tkazma cheki yuqorida.`
