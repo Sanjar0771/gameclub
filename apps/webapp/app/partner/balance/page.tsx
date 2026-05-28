@@ -120,6 +120,12 @@ export default function PartnerBalance() {
                   {w.status}
                 </Badge>
               </div>
+              {w.status === 'COMPLETED' && w.receiptImage && !w.receiptImage.startsWith('tg://') && (
+                <div className="mt-2">
+                  <div className="text-xs text-tg-hint mb-1">{lang === 'UZ' ? 'O\'tkazma cheki' : 'Чек перевода'}</div>
+                  <img src={w.receiptImage} alt="Receipt" className="w-full max-h-40 object-contain rounded-xl border border-tg-section-separator" />
+                </div>
+              )}
               {w.rejectReason && (
                 <div className="text-xs text-red-600 mt-2">{w.rejectReason}</div>
               )}
