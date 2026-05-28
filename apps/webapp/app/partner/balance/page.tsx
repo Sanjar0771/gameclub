@@ -16,6 +16,7 @@ export default function PartnerBalance() {
   const [showRequest, setShowRequest] = useState<string | null>(null);
   const [amount, setAmount] = useState(0);
   const [submitting, setSubmitting] = useState(false);
+  const [fullImage, setFullImage] = useState<string | null>(null);
 
   const { data: balances, isLoading } = useQuery({
     queryKey: ['my-balances'],
@@ -123,7 +124,13 @@ export default function PartnerBalance() {
               {w.status === 'COMPLETED' && w.receiptImage && !w.receiptImage.startsWith('tg://') && (
                 <div className="mt-2">
                   <div className="text-xs text-tg-hint mb-1">{lang === 'UZ' ? 'O\'tkazma cheki' : 'Чек перевода'}</div>
-                  <img src={w.receiptImage} alt="Receipt" className="w-full max-h-40 object-contain rounded-xl border border-tg-section-separator" />
+                  <img
+                    src={w.receiptImage}
+                    alt="Receipt"
+                    onClick={() => setFullImage(w.receiptImage)}
+                    className="w-full max-h-40 object-contain rounded-xl border border-tg-section-separator cursor-pointer active:opacity-80"
+                  />
+                  <div className="text-xs text-brand-500 text-center mt-1">{lang === 'UZ' ? 'Kattalashtirish uchun bosing' : 'Нажмите для увеличения'}</div>
                 </div>
               )}
               {w.rejectReason && (
@@ -163,6 +170,13 @@ export default function PartnerBalance() {
               {submitting ? '...' : lang === 'UZ' ? 'So\'rov yuborish' : 'Отправить запрос'}
             </button>
           </div>
+        </div>
+      )}
+
+      {fullImage && (
+        <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4" onClick={() => setFullImage(null)}>
+          <button className="absolute top-4 right-4 text-white text-3xl font-bold z-10" onClick={() => setFullImage(null)}>&times;</button>
+          <img src={fullImage} alt="Receipt" className="max-w-full max-h-full object-contain rounded-xl" />
         </div>
       )}
     </div>
